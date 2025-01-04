@@ -9,8 +9,8 @@ from typing import cast
 
 import torch
 
-from .transforms.cpu import _cpu_operations as cpu
-from .transforms.cuda import _cuda_operations as cuda
+from ._cpu import _cpu_operations as cpu
+from ._cuda import _cuda_operations as cuda
 
 Quaternion = torch.Tensor
 DualQuaternions = Tuple[Quaternion, Quaternion]

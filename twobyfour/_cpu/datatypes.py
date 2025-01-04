@@ -10,7 +10,6 @@ from typing import Optional, Union
 
 import torch
 
-
 Device = Union[str, torch.device]
 
 
