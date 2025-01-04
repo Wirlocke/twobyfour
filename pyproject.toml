@@ -30,3 +30,8 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Image Processing",
     "Topic :: Scientific/Engineering :: Image Recognition",
 ]
+
+
+[project.urls]
+Repository = "https://github.com/Wirlocke/twobyfour.git"
+Issues     = "https://github.com/Wirlocke/twobyfour/issues"
