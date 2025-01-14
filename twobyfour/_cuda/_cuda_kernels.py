@@ -2,7 +2,7 @@
 # Copyright (c) 2023 Chaoyang Wang
 # 
 # This source code contains modifications of work covered by MIT license.
-# see LICENSE and LICENSE-dqtorch for the full license text.
+# See LICENSE and LICENSE-dqtorch for the full license text.
 
 import cutex
 
