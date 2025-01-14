@@ -6,12 +6,12 @@
 
 # pyre-unsafe
 
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 import torch.nn.functional as F
 
-from .datatypes import Device
+Device = Union[str, torch.device]
 
 
 """

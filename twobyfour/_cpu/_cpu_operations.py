@@ -5,7 +5,7 @@
 
 import torch
 
-from . import rotation_conversions
+from .. import rotation_conversions
 
 
 def _quaternion_conjugate_pytorch(q: torch.Tensor) -> torch.Tensor:
