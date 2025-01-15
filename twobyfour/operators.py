@@ -149,7 +149,7 @@ def dual_quaternion_apply(dq: DualQuaternions, point: torch.Tensor) -> torch.Ten
 
 def dual_quaternion_rectify(dq: DualQuaternions) -> DualQuaternions:
     """
-    input: (unit quaternion, 4D vector w') -> dual quaternion, which satisfies (r, 0.5* t r)
+    input: (unit quaternion, 4D vector w') -> dual quaternion, which satisfies (r, 0.5 * t r)
     solve: min | q - w' | s.t. w^T r = 0
     """
     q_r, q_d = dq
