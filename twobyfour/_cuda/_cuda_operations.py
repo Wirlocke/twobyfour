@@ -111,11 +111,13 @@ class _Quaternion_mul(Function):
 
     @staticmethod
     @custom_bwd(device_type='cuda')
-    def backward(ctx, grad: torch.Tensor):  # type: ignore # nopep8
+    def backward(ctx, *grad_outputs: torch.Tensor):
         # grad: [B, C * C]
 
         # if ctx.calc_grad_inputs:
+        grad, *_ = grad_outputs
         grad = grad.contiguous()
+        
         inputs_1, inputs_2 = ctx.saved_tensors
 
         gi = _quaternion_mul_backward(grad, inputs_1, inputs_2)
@@ -139,8 +141,8 @@ class _Quaternion_conjugate(torch.autograd.Function):
 
     @staticmethod
     @custom_bwd(device_type='cuda')
-    def backward(ctx, grad: torch.Tensor):  # type: ignore # nopep8
-        return _Quaternion_conjugate.apply(grad)
+    def backward(ctx, *grad_outputs: torch.Tensor):
+        return _Quaternion_conjugate.apply(grad_outputs)
 
 
 quaternion_conjugate = _Quaternion_conjugate.apply
