@@ -4,8 +4,7 @@
 # This source code contains modifications of work covered by MIT license.
 # See LICENSE and LICENSE-dqtorch for the full license text.
 
-from typing import Tuple
-from typing import cast
+from typing import Tuple, cast
 
 import torch
 
@@ -15,6 +14,10 @@ from ._cuda import _cuda_operations as cuda
 Quaternion = torch.Tensor
 DualQuaternions = Tuple[Quaternion, Quaternion]
 QuaternionTranslation = Tuple[Quaternion, torch.Tensor]
+
+# =============================================
+# Basic Quaternion Operations
+# =============================================
 
 
 def quaternion_conjugate(q: Quaternion) -> Quaternion:
@@ -60,6 +63,10 @@ def quaternion_apply(quaternion: Quaternion, point: torch.Tensor) -> torch.Tenso
     )
     return out[..., 1:].contiguous()
 
+# =============================================
+# Quaternion Translations
+# =============================================
+
 
 def quaternion_translation_apply(q: Quaternion, t: torch.Tensor, point: torch.Tensor) -> torch.Tensor:
     p = quaternion_apply(q, point)
@@ -72,10 +79,14 @@ def quaternion_translation_compose(qt1: QuaternionTranslation, qt2: QuaternionTr
     return (qr, t)
 
 
-def quaternion_translation_inverse(q: Quaternion, t: torch.Tensor) -> Tuple[Quaternion, torch.Tensor]:
+def quaternion_translation_inverse(q: Quaternion, t: torch.Tensor) -> QuaternionTranslation:
     q_inv = quaternion_conjugate(q)
     t_inv = quaternion_apply(q_inv, -t)
     return q_inv, t_inv
+
+# =============================================
+# Conversions
+# =============================================
 
 
 def quaternion_translation_to_dual_quaternion(
@@ -93,6 +104,31 @@ def dual_quaternion_to_quaternion_translation(dq: DualQuaternions) -> DualQuater
 
     return q_r, t
 
+# =============================================
+# Dual Quaternion Conjugates
+# =============================================
+
+
+def dual_quaternion_q_conjugate(dq: DualQuaternions) -> DualQuaternions:
+    r = quaternion_conjugate(dq[0])
+    d = quaternion_conjugate(dq[1])
+    return (r, d)
+
+
+dual_quaternion_inverse = dual_quaternion_q_conjugate
+
+
+def dual_quaternion_d_conjugate(dq: DualQuaternions) -> DualQuaternions:
+    return (dq[0], -dq[1])
+
+
+def dual_quaternion_3rd_conjugate(dq: DualQuaternions) -> DualQuaternions:
+    return dual_quaternion_d_conjugate(dual_quaternion_q_conjugate(dq))
+
+# =============================================
+# Dual Quaternion Operations
+# =============================================
+
 
 def dual_quaternion_mul(dq1: DualQuaternions, dq2: DualQuaternions) -> DualQuaternions:
     q_r1, q_d1 = dq1
@@ -109,23 +145,6 @@ def dual_quaternion_apply(dq: DualQuaternions, point: torch.Tensor) -> torch.Ten
     '''
     q, t = dual_quaternion_to_quaternion_translation(dq)
     return quaternion_translation_apply(q, t, point)
-
-
-def dual_quaternion_q_conjugate(dq: DualQuaternions) -> DualQuaternions:
-    r = quaternion_conjugate(dq[0])
-    d = quaternion_conjugate(dq[1])
-    return (r, d)
-
-
-def dual_quaternion_d_conjugate(dq: DualQuaternions) -> DualQuaternions:
-    return (dq[0], -dq[1])
-
-
-def dual_quaternion_3rd_conjugate(dq: DualQuaternions) -> DualQuaternions:
-    return dual_quaternion_d_conjugate(dual_quaternion_q_conjugate(dq))
-
-
-dual_quaternion_inverse = dual_quaternion_q_conjugate
 
 
 def dual_quaternion_rectify(dq: DualQuaternions) -> DualQuaternions:
