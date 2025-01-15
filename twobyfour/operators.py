@@ -140,18 +140,18 @@ def dual_quaternion_mul(dq1: DualQuaternions, dq2: DualQuaternions) -> DualQuate
 
 
 def dual_quaternion_apply(dq: DualQuaternions, point: torch.Tensor) -> torch.Tensor:
-    '''
-        assuming the input dual quaternion is normalized.
-    '''
+    """
+    assuming the input dual quaternion is normalized.
+    """
     q, t = dual_quaternion_to_quaternion_translation(dq)
     return quaternion_translation_apply(q, t, point)
 
 
 def dual_quaternion_rectify(dq: DualQuaternions) -> DualQuaternions:
-    '''
-        input: (unit quaternion, 4D vector w') -> dual quaternion, which satisfies (r, 0.5* t r)
-        solve: min | q - w' | s.t. w^T r = 0
-    '''
+    """
+    input: (unit quaternion, 4D vector w') -> dual quaternion, which satisfies (r, 0.5* t r)
+    solve: min | q - w' | s.t. w^T r = 0
+    """
     q_r, q_d = dq
     q_d = q_d - (q_r * q_d).sum(-1, keepdim=True) * q_r
 
