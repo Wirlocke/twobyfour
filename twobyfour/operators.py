@@ -1,6 +1,6 @@
 # Copyright (c) 2025 Marisha Norcross
 # Copyright (c) 2023 Chaoyang Wang
-# 
+#
 # This source code contains modifications of work covered by MIT license.
 # See LICENSE and LICENSE-dqtorch for the full license text.
 
@@ -88,18 +88,16 @@ def quaternion_translation_to_dual_quaternion(
 
 
 def dual_quaternion_to_quaternion_translation(dq: DualQuaternions) -> DualQuaternions:
-    q_r = dq[0]
-    q_d = dq[1]
+    q_r, q_d = dq
     t = 2*quaternion_mul(q_d, quaternion_conjugate(q_r))[..., 1:]
 
     return q_r, t
 
 
 def dual_quaternion_mul(dq1: DualQuaternions, dq2: DualQuaternions) -> DualQuaternions:
-    q_r1 = dq1[0]
-    q_d1 = dq1[1]
-    q_r2 = dq2[0]
-    q_d2 = dq2[1]
+    q_r1, q_d1 = dq1
+    q_r2, q_d2 = dq2
+
     r_r = quaternion_mul(q_r1, q_r2)
     r_d = quaternion_mul(q_r1, q_d2) + quaternion_mul(q_d1, q_r2)
     return (r_r, r_d)
