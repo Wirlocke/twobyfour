@@ -8,37 +8,43 @@ import cutex
 
 KERNELS = """
 //cuda
+__device__ void extract_quaternion_components(
+	bool pure,
+    const uint32_t b,
+    Tensor<float, 2> inputs,
+    float &w,
+    float &x,
+    float &y,
+    float &z)
+{
+    if (pure)
+    {
+		w = 0, x = inputs[b][0], y = inputs[b][1], z = inputs[b][2];
+	}
+    else
+    {
+		w = inputs[b][0], x = inputs[b][1], y = inputs[b][2], z = inputs[b][3];
+	}
+}
+
+
 __global__ void kernel_quaternion_mul(
     Tensor<float, 2> inputs_1,
     Tensor<float, 2> inputs_2,
     Tensor<float, 2> outputs,
     uint32_t B,
-    uint8_t D1,
-    uint8_t D2)
+    bool P1,
+    bool P2)
 {
     const uint32_t b = threadIdx.x + blockIdx.x * blockDim.x;
 	if (b >= B)
 		return;
     
     float aw = 0, ax = 0, ay = 0, az = 0;
+    extract_quaternion_components(P1, b, inputs_1, aw, ax, ay, az);
+    
     float bw = 0, bx = 0, by = 0, bz = 0;
-    if (D1 == 3)
-	{
-		aw = 0, ax = inputs_1[b][0], ay = inputs_1[b][1], az = inputs_1[b][2];
-	}
-	else
-	{
-		aw = inputs_1[b][0], ax = inputs_1[b][1], ay = inputs_1[b][2], az = inputs_1[b][3];
-	}
-
-	if (D2 == 3)
-	{
-		bw = 0, bx = inputs_2[b][0], by = inputs_2[b][1], bz = inputs_2[b][2];
-	}
-	else
-	{
-		bw = inputs_2[b][0], bx = inputs_2[b][1], by = inputs_2[b][2], bz = inputs_2[b][3];
-	}
+    extract_quaternion_components(P2, b, inputs_2, bw, bx, by, bz);
 
 	outputs[b][0] = aw * bw - ax * bx - ay * by - az * bz;
 	outputs[b][1] = aw * bx + ax * bw + ay * bz - az * by;
@@ -50,8 +56,8 @@ __global__ void kernel_quaternion_mul(
 __global__ void kernel_quaternion_mul_backward(
     Tensor<float, 2> grad,
     uint32_t B,
-    uint8_t D1,
-    uint8_t D2,
+    bool P1,
+    bool P2,
     Tensor<float, 2> inputs_1,
     Tensor<float, 2> inputs_2,
     Tensor<float, 2> grad_inputs_1,
@@ -64,32 +70,18 @@ __global__ void kernel_quaternion_mul_backward(
     const uint8_t d = t - b * 4;
     
     float aw = 0, ax = 0, ay = 0, az = 0;
+    extract_quaternion_components(P1, b, inputs_1, aw, ax, ay, az);
+    
     float bw = 0, bx = 0, by = 0, bz = 0;
-    if (D1 == 3)
-	{
-		aw = 0, ax = inputs_1[b][0], ay = inputs_1[b][1], az = inputs_1[b][2];
-	}
-	else
-	{
-		aw = inputs_1[b][0], ax = inputs_1[b][1], ay = inputs_1[b][2], az = inputs_1[b][3];
-	}
-
-	if (D2 == 3)
-	{
-		bw = 0, bx = inputs_2[b][0], by = inputs_2[b][1], bz = inputs_2[b][2];
-	}
-	else
-	{
-		bw = inputs_2[b][0], bx = inputs_2[b][1], by = inputs_2[b][2], bz = inputs_2[b][3];
-	}
+    extract_quaternion_components(P2, b, inputs_2, bw, bx, by, bz);
     
     if (d == 0)
 	{
-		if (D1 > 3)
+		if (!P1)
 		{
 			grad_inputs_1[b][d] = grad[b][0] * bw + grad[b][1] * bx + grad[b][2] * by + grad[b][3] * bz;
 		}
-		if (D2 > 3)
+		if (!P2)
 		{
 			grad_inputs_2[b][d] = grad[b][0] * aw + grad[b][1] * ax + grad[b][2] * ay + grad[b][3] * az;
 		}
@@ -116,8 +108,8 @@ __global__ void kernel_quaternion_mul_backward_backward(
     Tensor<float, 2> grad_out_1,
     Tensor<float, 2> grad_out_2,
     uint32_t B,
-    uint8_t D1,
-    uint8_t D2,
+    bool P1,
+    bool P2,
     Tensor<float, 2> grad,
     Tensor<float, 2> inputs_1,
     Tensor<float, 2> inputs_2,
@@ -132,40 +124,25 @@ __global__ void kernel_quaternion_mul_backward_backward(
     const uint8_t d = t - b * 4;
     
     float aw = 0, ax = 0, ay = 0, az = 0;
-    float bw = 0, bx = 0, by = 0, bz = 0;
+    extract_quaternion_components(P1, b, inputs_1, aw, ax, ay, az);
     
     float d_aw = 0, d_ax = 0, d_ay = 0, d_az = 0;
-    float d_bw = 0, d_bx = 0, d_by = 0, d_bz = 0;
+    extract_quaternion_components(P1, b, grad_out_1, d_aw, d_ax, d_ay, d_az);
     
-    if (D1 == 3)
-	{
-		aw = 0, ax = inputs_1[b][0], ay = inputs_1[b][1], az = inputs_1[b][2];
-		d_aw = 0, d_ax = grad_out_1[b][0], d_ay = grad_out_1[b][1], d_az = grad_out_1[b][2];
-	}
-	else
-	{
-		aw = inputs_1[b][0], ax = inputs_1[b][1], ay = inputs_1[b][2], az = inputs_1[b][3];
-		d_aw = grad_out_1[b][0], d_ax = grad_out_1[b][1], d_ay = grad_out_1[b][2], d_az = grad_out_1[b][3];
-	}
-
-	if (D2 == 3)
-	{
-		bw = 0, bx = inputs_2[b][0], by = inputs_2[b][1], bz = inputs_2[b][2];
-		d_bw = 0, d_bx = grad_out_2[b][0], d_by = grad_out_2[b][1], d_bz = grad_out_2[b][2];
-	}
-	else
-	{
-		bw = inputs_2[b][0], bx = inputs_2[b][1], by = inputs_2[b][2], bz = inputs_2[b][3];
-		d_bw = grad_out_2[b][0], d_bx = grad_out_2[b][1], d_by = grad_out_2[b][2], d_bz = grad_out_2[b][3];
-	}
+    
+    float bw = 0, bx = 0, by = 0, bz = 0;
+    extract_quaternion_components(P2, b, inputs_2, bw, bx, by, bz);
+    
+    float d_bw = 0, d_bx = 0, d_by = 0, d_bz = 0;
+    extract_quaternion_components(P2, b, grad_out_2, d_bw, d_bx, d_by, d_bz);
     
     if (d == 0)
 	{
-		if (D1 > 3)
+		if (!P1)
 		{
 			grad_grad_inputs_1[b][d] = d_bw * grad[b][0] + d_bx * grad[b][1] + d_by * grad[b][2] + d_bz * grad[b][3];
 		}
-		if (D2 > 3)
+		if (!P2)
 		{
 			grad_grad_inputs_2[b][d] = d_aw * grad[b][0] + d_ax * grad[b][1] + d_ay * grad[b][2] + d_az * grad[b][3];
 		}
@@ -197,25 +174,16 @@ __global__ void kernel_quaternion_mul_backward_backward(
 __global__ void kernel_quaternion_magnitude(
 	Tensor<float, 2> inputs,
     uint32_t B,
-    uint8_t D,
+    bool P,
     Tensor<float, 2> outputs)
 {
     const uint32_t b = threadIdx.x + blockIdx.x * blockDim.x;
     
 	if (b >= B)
 		return;
-    printf("ThreadID: %d\\nBlockID: %d\\nBlockDim: %d\\n", threadIdx.x, blockIdx.x, blockDim.x);
         
     float w = 0, x = 0, y = 0, z = 0;
-    
-    if (D == 3)
-    {
-		w = 0, x = inputs[b][0], y = inputs[b][1], z = inputs[b][2];
-	}
-    else
-    {
-		w = inputs[b][0], x = inputs[b][1], y = inputs[b][2], z = inputs[b][3];
-	}
+    extract_quaternion_components(P, b, inputs, w, x, y, z);
     
     outputs[b][0] = sqrtf((w*w) + (x*x) + (y*y) + (z*z));
 }
