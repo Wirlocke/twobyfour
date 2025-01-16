@@ -12,11 +12,11 @@ __global__ void kernel_quaternion_mul(
     Tensor<float, 2> inputs_1,
     Tensor<float, 2> inputs_2,
     Tensor<float, 2> outputs,
-    int B,
-    int D1,
-    int D2)
+    uint32_t B,
+    uint8_t D1,
+    uint8_t D2)
 {
-    const int b = threadIdx.x + blockIdx.x * blockDim.x;
+    const uint32_t b = threadIdx.x + blockIdx.x * blockDim.x;
 	if (b >= B)
 		return;
     
@@ -49,19 +49,19 @@ __global__ void kernel_quaternion_mul(
 
 __global__ void kernel_quaternion_mul_backward(
     Tensor<float, 2> grad,
-    int B,
-    int D1,
-    int D2,
+    uint32_t B,
+    uint8_t D1,
+    uint8_t D2,
     Tensor<float, 2> inputs_1,
     Tensor<float, 2> inputs_2,
     Tensor<float, 2> grad_inputs_1,
     Tensor<float, 2> grad_inputs_2)
 {
-    const int t = threadIdx.x + blockIdx.x * blockDim.x;
-    const int b = t / 4;
+    const uint32_t t = threadIdx.x + blockIdx.x * blockDim.x;
+    const uint32_t b = t / 4;
     if (b >= B)
         return;
-    const int d = t - b * 4;
+    const uint8_t d = t - b * 4;
     
     float aw = 0, ax = 0, ay = 0, az = 0;
     float bw = 0, bx = 0, by = 0, bz = 0;
@@ -115,9 +115,9 @@ __global__ void kernel_quaternion_mul_backward(
 __global__ void kernel_quaternion_mul_backward_backward(
     Tensor<float, 2> grad_out_1,
     Tensor<float, 2> grad_out_2,
-    int B,
-    int D1,
-    int D2,
+    uint32_t B,
+    uint8_t D1,
+    uint8_t D2,
     Tensor<float, 2> grad,
     Tensor<float, 2> inputs_1,
     Tensor<float, 2> inputs_2,
@@ -125,11 +125,11 @@ __global__ void kernel_quaternion_mul_backward_backward(
     Tensor<float, 2> grad_grad_inputs_1,
     Tensor<float, 2> grad_grad_inputs_2)
 {
-    const int t = threadIdx.x + blockIdx.x * blockDim.x;
-    const int b = t / 4;
+    const uint32_t t = threadIdx.x + blockIdx.x * blockDim.x;
+    const uint32_t b = t / 4;
     if (b >= B)
 		return;
-    const int d = t - b * 4;
+    const uint8_t d = t - b * 4;
     
     float aw = 0, ax = 0, ay = 0, az = 0;
     float bw = 0, bx = 0, by = 0, bz = 0;
@@ -196,11 +196,11 @@ __global__ void kernel_quaternion_mul_backward_backward(
 
 __global__ void kernel_quaternion_magnitude(
 	Tensor<float, 2> inputs,
-    int B,
-    int D,
+    uint32_t B,
+    uint8_t D,
     Tensor<float, 2> outputs)
 {
-    const int b = threadIdx.x + blockIdx.x * blockDim.x;
+    const uint32_t b = threadIdx.x + blockIdx.x * blockDim.x;
     
 	if (b >= B)
 		return;
@@ -222,14 +222,14 @@ __global__ void kernel_quaternion_magnitude(
 
 __global__ void kernel_quaternion_conjugate(
     Tensor<float, 2> inputs,
-    int B,
+    uint32_t B,
     Tensor<float, 2> outputs)
 {
-    const int t = threadIdx.x + blockIdx.x * blockDim.x;
-    const int b = t / 4;
+    const uint32_t t = threadIdx.x + blockIdx.x * blockDim.x;
+    const uint32_t b = t / 4;
     if (b >= B)
 		return;
-    const int d = t - b * 4;
+    const uint8_t d = t - b * 4;
     
     if (d == 0)
     {
