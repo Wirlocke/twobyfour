@@ -1,6 +1,6 @@
 # Copyright (c) 2025 Marisha Norcross
 # Copyright (c) 2023 Chaoyang Wang
-# 
+#
 # This source code contains modifications of work covered by MIT license.
 # See LICENSE and LICENSE-dqtorch for the full license text.
 
@@ -16,11 +16,12 @@ __global__ void kernel_quaternion_mul(
     int D1,
     int D2)
 {
-    const uint32_t b = threadIdx.x + blockIdx.x * blockDim.x;
+    const int b = threadIdx.x + blockIdx.x * blockDim.x;
 	if (b >= B)
 		return;
     
-    float aw, ax, ay, az, bw, bx, by, bz = 0;
+    float aw = 0, ax = 0, ay = 0, az = 0;
+    float bw = 0, bx = 0, by = 0, bz = 0;
     if (D1 == 3)
 	{
 		aw = 0, ax = inputs_1[b][0], ay = inputs_1[b][1], az = inputs_1[b][2];
@@ -62,7 +63,8 @@ __global__ void kernel_quaternion_mul_backward(
         return;
     const int d = t - b * 4;
     
-    float aw, ax, ay, az, bw, bx, by, bz = 0;
+    float aw = 0, ax = 0, ay = 0, az = 0;
+    float bw = 0, bx = 0, by = 0, bz = 0;
     if (D1 == 3)
 	{
 		aw = 0, ax = inputs_1[b][0], ay = inputs_1[b][1], az = inputs_1[b][2];
@@ -129,8 +131,11 @@ __global__ void kernel_quaternion_mul_backward_backward(
 		return;
     const int d = t - b * 4;
     
-    float aw, ax, ay, az, bw, bx, by, bz = 0;
-    float d_aw, d_ax, d_ay, d_az, d_bw, d_bx, d_by, d_bz = 0;
+    float aw = 0, ax = 0, ay = 0, az = 0;
+    float bw = 0, bx = 0, by = 0, bz = 0;
+    
+    float d_aw = 0, d_ax = 0, d_ay = 0, d_az = 0;
+    float d_bw = 0, d_bx = 0, d_by = 0, d_bz = 0;
     
     if (D1 == 3)
 	{
@@ -189,6 +194,31 @@ __global__ void kernel_quaternion_mul_backward_backward(
 	}
 }
 
+__global__ void kernel_quaternion_magnitude(
+	Tensor<float, 2> inputs,
+    int B,
+    int D,
+    Tensor<float, 2> outputs)
+{
+    const int b = threadIdx.x + blockIdx.x * blockDim.x;
+    
+	if (b >= B)
+		return;
+    printf("ThreadID: %d\\nBlockID: %d\\nBlockDim: %d\\n", threadIdx.x, blockIdx.x, blockDim.x);
+        
+    float w = 0, x = 0, y = 0, z = 0;
+    
+    if (D == 3)
+    {
+		w = 0, x = inputs[b][0], y = inputs[b][1], z = inputs[b][2];
+	}
+    else
+    {
+		w = inputs[b][0], x = inputs[b][1], y = inputs[b][2], z = inputs[b][3];
+	}
+    
+    outputs[b][0] = sqrtf((w*w) + (x*x) + (y*y) + (z*z));
+}
 
 __global__ void kernel_quaternion_conjugate(
     Tensor<float, 2> inputs,
