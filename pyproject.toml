@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "twobyfour"
 dynamic = ["version"]
-description = "A double quaternion library for pytorch using cuda"
+description = "A double quaternion library for pytorch using cuda."
 readme = "README.md"
 requires-python = ">=3.8"
 license = "MIT"
