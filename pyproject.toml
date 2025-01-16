@@ -1,10 +1,10 @@
 [build-system]
-requires      = ["hatchling"]
+requires      = ["hatchling", "hatchling-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "twobyfour"
-version = "1.0.1"
+dynamic = ["version"]
 description = "A double quaternion library for pytorch using cuda"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -31,7 +31,9 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Image Recognition",
 ]
 
-
 [project.urls]
 Repository = "https://github.com/Wirlocke/twobyfour.git"
 Issues     = "https://github.com/Wirlocke/twobyfour/issues"
+
+[tool.hatch.version]
+source = "vcs"
