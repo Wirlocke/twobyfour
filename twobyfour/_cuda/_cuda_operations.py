@@ -15,8 +15,7 @@ from ._cuda_kernels import kernels
 def _validate_broadcast_dimensions(B: int, D1: int, D2: int, B1: int, B2: int):
     if not (B1 == B2) and not (B1 == 1 or B2 == 1):
         raise ValueError(
-            f"Batch dimensions must match or one must be scalar. Got B={
-                B}, B1={B1}, B2={B2}"
+            f"Batch dimensions must match or one must be scalar. Got B={B}, B1={B1}, B2={B2}"  # nopep8
         )
 
     if not (D1 == 3 or D1 == 4):
@@ -49,10 +48,17 @@ class _Quaternion_mul_backward(Function):
         grad_inputs_1 = torch.empty(B1, D1, device=device, dtype=dtype)
         grad_inputs_2 = torch.empty(B2, D2, device=device, dtype=dtype)
 
+        block_x = 256
+        block = (block_x, 1, 1)
+
+        grid_x = -((B*4)  // -block_x)
+        grid = (grid_x, 1, 1)
+
         kernels.kernel_quaternion_mul_backward(
             grad, B, D1, D2,
             inputs_1, inputs_2,
-            grad_inputs_1, grad_inputs_2)
+            grad_inputs_1, grad_inputs_2,
+            block=block, grid=grid)
 
         ctx.save_for_backward(grad, inputs_1, inputs_2)
 
@@ -73,11 +79,18 @@ class _Quaternion_mul_backward(Function):
         grad_grad_inputs_1 = torch.empty(B1, D1, device=device, dtype=dtype)
         grad_grad_inputs_2 = torch.empty(B2, D2, device=device, dtype=dtype)
 
+        block_x = 256
+        block = (block_x, 1, 1)
+
+        grid_x = -((B*4)  // -block_x)
+        grid = (grid_x, 1, 1)
+
         kernels.kernel_quaternion_mul_backward_backward(
             grad_out_1, grad_out_2,
             B, D1, D2,
             grad, inputs_1, inputs_2,
-            grad_grad, grad_grad_inputs_1, grad_grad_inputs_2)
+            grad_grad, grad_grad_inputs_1, grad_grad_inputs_2,
+            block=block, grid=grid)
 
         return grad_grad, grad_grad_inputs_1, grad_grad_inputs_2
 
@@ -103,7 +116,14 @@ class _Quaternion_mul(Function):
 
         outputs = torch.empty(B, 4, dtype=dtype, device=device)
 
-        kernels.kernel_quaternion_mul(inputs_1, inputs_2, outputs, B, D1, D2)
+        block_x = 256
+        block = (block_x, 1, 1)
+
+        grid_x = -(B  // -block_x)
+        grid = (grid_x, 1, 1)
+
+        kernels.kernel_quaternion_mul(
+            inputs_1, inputs_2, outputs, B, D1, D2, block=block, grid=grid)
 
         ctx.save_for_backward(inputs_1, inputs_2)
 
@@ -117,7 +137,7 @@ class _Quaternion_mul(Function):
         # if ctx.calc_grad_inputs:
         grad, *_ = grad_outputs
         grad = grad.contiguous()
-        
+
         inputs_1, inputs_2 = ctx.saved_tensors
 
         gi = _quaternion_mul_backward(grad, inputs_1, inputs_2)
@@ -136,7 +156,15 @@ class _Quaternion_conjugate(torch.autograd.Function):
     def forward(ctx, inputs: torch.Tensor):
         B = inputs.shape[0]  # batch size, coord dim
         outputs = torch.empty_like(inputs)
-        kernels.kernel_quaternion_conjugate(inputs.contiguous(), B, outputs)
+
+        block_x = 256
+        block = (block_x, 1, 1)
+
+        grid_x = -((B*4)  // -block_x)
+        grid = (grid_x, 1, 1)
+
+        kernels.kernel_quaternion_conjugate(
+            inputs.contiguous(), B, outputs, block=block, grid=grid)
         return outputs
 
     @staticmethod
