@@ -58,6 +58,25 @@ __global__ void quaternion_conjugate(
     output[tx][tz] = tens[tx][tz] * (1 - (2 * (tz > 0)));
 }
 
+__global__ void quaternion_inverse(
+    const size_t X_SIZE,
+    Tensor<float, 2> tens,
+    Tensor<float, 2> output)
+{
+    const size_t tx = blockIdx.x * blockDim.x + threadIdx.x;
+    const uint8_t tz = threadIdx.z;
+    if (tx >= X_SIZE)
+        return;
+    
+    const uint8_t VEC_SIGN = (1 - (2 * (tz > 0)))
+    const float DIVISOR = ((tens[tx][R] * tens[tx][R]) +
+                            (tens[tx][I] * tens[tx][I]) +
+                            (tens[tx][J] * tens[tx][J]) +
+                            (tens[tx][K] * tens[tx][K]))
+    
+    output[tx][tz] = (tens[tx][tz] * VEC_SIGN) / DIVISOR;
+}
+
 __global__ void quaternion_magnitude(
     const size_t X_SIZE,
     Tensor<float, 2> tens,
@@ -106,21 +125,12 @@ def quat_conj(quat: Tensor) -> Tensor:
     return output
 
 
-def quat_mul_grad(grad: Tensor, left: Tensor, right: Tensor) -> tuple[Tensor, Tensor]:
-    left_grad = quat_mul(grad, quat_conj(right))
-    right_grad = quat_mul(quat_conj(left), grad)
-    return left_grad, right_grad
-
-
-def quat_mul_second_grad(grad: Tensor, left: Tensor, right: Tensor, left_grad: Tensor, right_grad: Tensor) -> tuple[Tensor, Tensor]:
-    left_second_grad = quat_mul(left_grad, quat_conj(right)) + \
-        quat_mul(grad, quat_conj(right_grad))
-
-    right_second_grad = quat_mul(quat_conj(left), right_grad) + \
-        quat_mul(quat_conj(grad), right)
-
-    return left_second_grad, right_second_grad
-
+def quat_inv(quat: Tensor) -> Tensor:
+    output = torch.zeros_like(quat)
+    block, grid = block_grid_dim(output)
+    kernels.quaternion_inverse(output.shape[0], quat, output,
+                               block=block, grid=grid)
+    return output
 
 def quat_mag(quat: Tensor) -> Tensor:
     output = torch.zeros_like(quat).reshape(quat.shape[0], 1)
