@@ -1,4 +1,3 @@
-/*cppcheck:disable:all*/
 #define R 0
 #define I 1
 #define J 2
