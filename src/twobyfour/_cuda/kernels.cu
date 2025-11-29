@@ -47,26 +47,7 @@ __global__ void quaternion_conjugate(
     output[tx][tz] = tens[tx][tz] * (1 - (2 * (tz > 0)));
 }
 
-__global__ void quaternion_inverse(
-    const size_t X_SIZE,
-    Tensor<float, 2> tens,
-    Tensor<float, 2> output)
-{
-    const size_t tx = blockIdx.x * blockDim.x + threadIdx.x;
-    const uint8_t tz = threadIdx.z;
-    if (tx >= X_SIZE)
-        return;
-
-    const int8_t VEC_SIGN = (1 - (2 * (tz > 0)));
-    const float DIVISOR = ((tens[tx][R] * tens[tx][R]) +
-                           (tens[tx][I] * tens[tx][I]) +
-                           (tens[tx][J] * tens[tx][J]) +
-                           (tens[tx][K] * tens[tx][K]));
-
-    output[tx][tz] = (tens[tx][tz] * VEC_SIGN) / DIVISOR;
-}
-
-__global__ void quaternion_magnitude(
+__global__ void quaternion_squares(
     const size_t X_SIZE,
     Tensor<float, 2> tens,
     Tensor<float, 2> output)
@@ -75,9 +56,8 @@ __global__ void quaternion_magnitude(
     if (tx >= X_SIZE)
         return;
 
-    output[tx][0] = sqrtf(
-        (tens[tx][R] * tens[tx][R]) +
-        (tens[tx][I] * tens[tx][I]) +
-        (tens[tx][J] * tens[tx][J]) +
-        (tens[tx][K] * tens[tx][K]));
+    output[tx][0] = ((tens[tx][R] * tens[tx][R]) +
+                     (tens[tx][I] * tens[tx][I]) +
+                     (tens[tx][J] * tens[tx][J]) +
+                     (tens[tx][K] * tens[tx][K]));
 }

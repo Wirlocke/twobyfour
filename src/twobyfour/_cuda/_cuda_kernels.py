@@ -43,16 +43,18 @@ def quat_conj(quat: Tensor) -> Tensor:
     return output
 
 
-def quat_inv(quat: Tensor) -> Tensor:
-    output = torch.zeros_like(quat)
+def quat_squares(quat: Tensor) -> Tensor:
+    output = torch.zeros(
+        quat.shape[0], 1, dtype=quat.dtype, device=quat.device)
     block, grid = block_grid_dim(output)
-    kernels.quaternion_inverse(output.shape[0], quat, output,
+    kernels.quaternion_squares(output.shape[0], quat, output,
                                block=block, grid=grid)
     return output
 
 
 def quat_mag(quat: Tensor) -> Tensor:
-    output = torch.zeros_like(quat).reshape(quat.shape[0], 1)
+    output = torch.zeros(
+        quat.shape[0], 1, dtype=quat.dtype, device=quat.device)
     block, grid = block_grid_dim(output)
     kernels.quaternion_magnitude(output.shape[0], quat, output,
                                  block=block, grid=grid)

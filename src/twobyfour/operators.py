@@ -16,6 +16,22 @@ DualQuaternions = Tuple[Quaternion, Quaternion]
 QuaternionTranslation = Tuple[Quaternion, torch.Tensor]
 
 # =============================================
+# Helper Functions
+# =============================================
+
+
+def tcast(t, shape: torch.Size) -> torch.Tensor:
+    return cast(torch.Tensor, t).view(shape)
+
+
+def quat_flatten(q: Quaternion) -> torch.Tensor:
+    return q.contiguous().view(-1, 4)
+
+
+qflat = quat_flatten
+
+
+# =============================================
 # Basic Quaternion Operations
 # =============================================
 
@@ -25,22 +41,15 @@ def quaternion_conjugate(q: Quaternion) -> Quaternion:
     # return _quaternion_conjugate_cuda(q.contiguous().view(-1,4)).view(out_shape)
     if q.is_cuda:
         out_shape = q.shape
-        return cast(torch.Tensor,
-                    cuda.quat_conj(
-                        q.contiguous().view(-1, 4))
-                    ).view(out_shape)
+        return tcast(cuda.quat_conj(qflat(q)), out_shape)
     else:
         return cpu._quaternion_conjugate_pytorch(q)
 
 
 def quaternion_mul(a: Quaternion, b: Quaternion) -> Quaternion:
     if a.is_cuda:
-        ouput_shape = list(a.shape[:-1]) + [4]
-        return cast(torch.Tensor,
-                    cuda.quat_mul(
-                        a.view(-1, a.shape[-1]),
-                        b.view(-1, b.shape[-1]))
-                    ).view(ouput_shape)
+        ouput_shape = torch.Size(list(a.shape[:-1]) + [4])
+        return tcast(cuda.quat_mul(qflat(a), qflat(b)), ouput_shape)
     else:
         return cpu._quaternion_mul_pytorch(a, b)
 
@@ -62,6 +71,18 @@ def quaternion_apply(quaternion: Quaternion, point: torch.Tensor) -> torch.Tenso
         quaternion_conjugate(quaternion)
     )
     return out[..., 1:].contiguous()
+
+
+def quaternion_inverse(q: Quaternion) -> Quaternion:
+    if q.is_cuda:
+        out_shape = torch.Size(list(q.shape[:-1]) + [1])
+        squares = tcast(cuda.quat_squares(qflat(q)), out_shape)
+    else:
+        squares = q.pow(2).sum(-1, keepdim=True)
+
+    conj = quaternion_conjugate(q)
+    return conj / squares
+
 
 # =============================================
 # Quaternion Translations

@@ -6,7 +6,7 @@ from . import _cuda_kernels as kernel
 
 CUDA = 'cuda'
 
-# Replace with inverse
+
 class _Quaternion_conj(Function):
     @staticmethod
     @custom_fwd(device_type=CUDA)
@@ -44,3 +44,21 @@ class _Quaternion_mul(Function):
 
 
 quat_mul = _Quaternion_mul.apply
+
+class _Quaternion_squares(Function):
+    @staticmethod
+    @custom_fwd(device_type=CUDA)
+    def forward(ctx, inputs: Tensor):
+        ctx.save_for_backward(inputs)
+        return kernel.quat_squares(inputs.contiguous())
+
+    @staticmethod
+    @custom_bwd(device_type=CUDA)
+    def backward(ctx, *grad_outputs: Tensor):
+        grad_output = grad_outputs[0]
+        inputs, = ctx.saved_tensors
+        
+        grad_out = 2 * inputs * grad_output
+        return grad_out
+
+quat_squares = _Quaternion_squares.apply
