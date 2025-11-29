@@ -50,6 +50,7 @@ def quat_inv(quat: Tensor) -> Tensor:
                                block=block, grid=grid)
     return output
 
+
 def quat_mag(quat: Tensor) -> Tensor:
     output = torch.zeros_like(quat).reshape(quat.shape[0], 1)
     block, grid = block_grid_dim(output)

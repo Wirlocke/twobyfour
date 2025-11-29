@@ -26,7 +26,7 @@ def quaternion_conjugate(q: Quaternion) -> Quaternion:
     if q.is_cuda:
         out_shape = q.shape
         return cast(torch.Tensor,
-                    cuda.quaternion_conjugate(
+                    cuda.quat_conj(
                         q.contiguous().view(-1, 4))
                     ).view(out_shape)
     else:
@@ -37,7 +37,7 @@ def quaternion_mul(a: Quaternion, b: Quaternion) -> Quaternion:
     if a.is_cuda:
         ouput_shape = list(a.shape[:-1]) + [4]
         return cast(torch.Tensor,
-                    cuda.quaternion_mul(
+                    cuda.quat_mul(
                         a.view(-1, a.shape[-1]),
                         b.view(-1, b.shape[-1]))
                     ).view(ouput_shape)
