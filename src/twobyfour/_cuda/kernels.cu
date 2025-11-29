@@ -57,7 +57,7 @@ __global__ void quaternion_inverse(
     if (tx >= X_SIZE)
         return;
 
-    const uint8_t VEC_SIGN = (1 - (2 * (tz > 0)));
+    const int8_t VEC_SIGN = (1 - (2 * (tz > 0)));
     const float DIVISOR = ((tens[tx][R] * tens[tx][R]) +
                            (tens[tx][I] * tens[tx][I]) +
                            (tens[tx][J] * tens[tx][J]) +
