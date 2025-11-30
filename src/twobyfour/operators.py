@@ -48,7 +48,7 @@ def quaternion_conjugate(q: Quaternion) -> Quaternion:
 
 def quaternion_mul(a: Quaternion, b: Quaternion) -> Quaternion:
     if a.is_cuda:
-        ouput_shape = torch.Size(list(a.shape[:-1]) + [4])
+        ouput_shape = torch.Size(a.shape[:-1] + (4,))
         return tcast(cuda.quat_mul(qflat(a), qflat(b)), ouput_shape)
     else:
         return cpu._quaternion_mul_pytorch(a, b)
@@ -75,7 +75,7 @@ def quaternion_apply(quaternion: Quaternion, point: torch.Tensor) -> torch.Tenso
 
 def quaternion_magnitude(q: Quaternion) -> torch.Tensor:
     if q.is_cuda:
-        out_shape = torch.Size(list(q.shape[:-1]) + [1])
+        out_shape = torch.Size(q.shape[:-1] + (1,))
         squares = tcast(cuda.quat_squares(qflat(q)), out_shape)
     else:
         squares = q.pow(2).sum(-1, keepdim=True)
@@ -84,7 +84,7 @@ def quaternion_magnitude(q: Quaternion) -> torch.Tensor:
 
 def quaternion_inverse(q: Quaternion) -> Quaternion:
     if q.is_cuda:
-        out_shape = torch.Size(list(q.shape[:-1]) + [1])
+        out_shape = torch.Size(q.shape[:-1] + (1,))
         squares = tcast(cuda.quat_squares(qflat(q)), out_shape)
     else:
         squares = q.pow(2).sum(-1, keepdim=True)
