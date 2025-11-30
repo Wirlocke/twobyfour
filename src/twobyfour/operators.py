@@ -73,6 +73,15 @@ def quaternion_apply(quaternion: Quaternion, point: torch.Tensor) -> torch.Tenso
     return out[..., 1:].contiguous()
 
 
+def quaternion_magnitude(q: Quaternion) -> torch.Tensor:
+    if q.is_cuda:
+        out_shape = torch.Size(list(q.shape[:-1]) + [1])
+        squares = tcast(cuda.quat_squares(qflat(q)), out_shape)
+    else:
+        squares = q.pow(2).sum(-1, keepdim=True)
+    return squares.sqrt()
+
+
 def quaternion_inverse(q: Quaternion) -> Quaternion:
     if q.is_cuda:
         out_shape = torch.Size(list(q.shape[:-1]) + [1])
