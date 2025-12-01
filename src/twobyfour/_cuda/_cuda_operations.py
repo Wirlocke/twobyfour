@@ -7,7 +7,7 @@ from . import _cuda_kernels as kernel
 CUDA = 'cuda'
 
 
-class _Quaternion_conj(Function):
+class _quaternion_conjugate(Function):
     @staticmethod
     @custom_fwd(device_type=CUDA)
     def forward(ctx, inputs: Tensor):
@@ -19,10 +19,10 @@ class _Quaternion_conj(Function):
         return quat_conj(grad_outputs[0])
 
 
-quat_conj = _Quaternion_conj.apply
+quat_conj = _quaternion_conjugate.apply
 
 
-class _Quaternion_mul(Function):
+class _quaternion_multiply(Function):
     @staticmethod
     @custom_fwd(device_type=CUDA)
     def forward(ctx, in_left: Tensor, in_right: Tensor):
@@ -43,9 +43,10 @@ class _Quaternion_mul(Function):
         return left_grad, right_grad
 
 
-quat_mul = _Quaternion_mul.apply
+quat_mul = _quaternion_multiply.apply
 
-class _Quaternion_squares(Function):
+
+class _quaternion_squares(Function):
     @staticmethod
     @custom_fwd(device_type=CUDA)
     def forward(ctx, inputs: Tensor):
@@ -57,8 +58,9 @@ class _Quaternion_squares(Function):
     def backward(ctx, *grad_outputs: Tensor):
         grad_output = grad_outputs[0]
         inputs, = ctx.saved_tensors
-        
+
         grad_out = 2 * inputs * grad_output
         return grad_out
 
-quat_squares = _Quaternion_squares.apply
+
+quat_squares = _quaternion_squares.apply

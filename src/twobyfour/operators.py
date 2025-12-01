@@ -41,8 +41,6 @@ qflat = quat_flatten
 
 
 def quaternion_conjugate(q: Quaternion) -> Quaternion:
-    # out_shape = q.shape
-    # return _quaternion_conjugate_cuda(q.contiguous().view(-1,4)).view(out_shape)
     if q.is_cuda:
         out_shape = q.shape
         return tcast(cuda.quat_conj(qflat(q)), out_shape)
@@ -50,12 +48,18 @@ def quaternion_conjugate(q: Quaternion) -> Quaternion:
         return cpu._quaternion_conjugate_pytorch(q)
 
 
-def quaternion_mul(a: Quaternion, b: Quaternion) -> Quaternion:
+conjq = quaternion_conjugate
+
+
+def quaternion_multiply(a: Quaternion, b: Quaternion) -> Quaternion:
     if a.is_cuda:
         out_shape = torch.Size(a.shape[:-1] + (4,))
         return tcast(cuda.quat_mul(qflat(a), qflat(b)), out_shape)
     else:
         return cpu._quaternion_mul_pytorch(a, b)
+
+
+mulq = quaternion_multiply
 
 
 def quaternion_apply(quaternion: Quaternion, point: torch.Tensor) -> torch.Tensor:
@@ -70,11 +74,14 @@ def quaternion_apply(quaternion: Quaternion, point: torch.Tensor) -> torch.Tenso
     Returns:
         Tensor of rotated points of shape (..., 3).
     """
-    out = quaternion_mul(
-        quaternion_mul(quaternion, point),
+    out = quaternion_multiply(
+        quaternion_multiply(quaternion, point),
         quaternion_conjugate(quaternion)
     )
     return out[..., 1:].contiguous()
+
+
+applyq = quaternion_apply
 
 
 def quaternion_magnitude(q: Quaternion) -> torch.Tensor:
@@ -85,6 +92,9 @@ def quaternion_magnitude(q: Quaternion) -> torch.Tensor:
         squares = q.pow(2).sum(-1, keepdim=True)
 
     return squares.sqrt()
+
+
+magq = quaternion_magnitude
 
 
 def quaternion_inverse(q: Quaternion) -> Quaternion:
@@ -98,6 +108,9 @@ def quaternion_inverse(q: Quaternion) -> Quaternion:
     return conj / squares
 
 
+invq = quaternion_inverse
+
+
 # =============================================
 # Quaternion Translations
 # =============================================
@@ -109,7 +122,7 @@ def quaternion_translation_apply(q: Quaternion, t: torch.Tensor, point: torch.Te
 
 
 def quaternion_translation_compose(qt1: QuaternionTranslation, qt2: QuaternionTranslation) -> QuaternionTranslation:
-    qr = quaternion_mul(qt1[0], qt2[0])
+    qr = quaternion_multiply(qt1[0], qt2[0])
     t = quaternion_apply(qt1[0], qt2[1]) + qt1[1]
     return (qr, t)
 
@@ -129,13 +142,13 @@ def quaternion_translation_to_dual_quaternion(
     '''
     https://cs.gmu.edu/~jmlien/teaching/cs451/uploads/Main/dual-quaternion.pdf
     '''
-    q_d = 0.5 * quaternion_mul(t, q)
+    q_d = 0.5 * quaternion_multiply(t, q)
     return (q, q_d)
 
 
 def dual_quaternion_to_quaternion_translation(dq: DualQuaternions) -> DualQuaternions:
     q_r, q_d = dq
-    t = 2*quaternion_mul(q_d, quaternion_conjugate(q_r))[..., 1:]
+    t = 2*quaternion_multiply(q_d, quaternion_conjugate(q_r))[..., 1:]
 
     return q_r, t
 
@@ -165,12 +178,12 @@ def dual_quaternion_3rd_conjugate(dq: DualQuaternions) -> DualQuaternions:
 # =============================================
 
 
-def dual_quaternion_mul(dq1: DualQuaternions, dq2: DualQuaternions) -> DualQuaternions:
+def dual_quaternion_multiply(dq1: DualQuaternions, dq2: DualQuaternions) -> DualQuaternions:
     q_r1, q_d1 = dq1
     q_r2, q_d2 = dq2
 
-    r_r = quaternion_mul(q_r1, q_r2)
-    r_d = quaternion_mul(q_r1, q_d2) + quaternion_mul(q_d1, q_r2)
+    r_r = quaternion_multiply(q_r1, q_r2)
+    r_d = quaternion_multiply(q_r1, q_d2) + quaternion_multiply(q_d1, q_r2)
     return (r_r, r_d)
 
 
