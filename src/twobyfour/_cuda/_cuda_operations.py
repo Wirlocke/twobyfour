@@ -20,11 +20,52 @@ class _quaternion_squared_sum(Function):
         grad_output = grad_outputs[0]
         inputs, = ctx.saved_tensors
 
-        grad_out = 2 * inputs * grad_output
-        return grad_out
+        return 2 * inputs * grad_output
 
 
 quat_sqsum = _quaternion_squared_sum.apply
+
+
+class _quaternion_magnitude(Function):
+    @staticmethod
+    @custom_fwd(device_type=CUDA)
+    def forward(ctx, inputs: Tensor):
+        inputs = inputs.contiguous()
+        output = kernel.quat_mag(inputs)
+        ctx.save_for_backward(inputs, output)
+        return output
+
+    @staticmethod
+    @custom_bwd(device_type=CUDA)
+    def backward(ctx, *grad_outputs: Tensor):
+        grad_output = grad_outputs[0]  # shape: (N, 1)
+        inputs, output = ctx.saved_tensors
+
+        return (inputs / output) * grad_output
+
+
+quat_mag = _quaternion_magnitude.apply
+
+
+class _quaternion_normalize(Function):
+    @staticmethod
+    @custom_fwd(device_type=CUDA)
+    def forward(ctx, inputs: Tensor):
+        inputs = inputs.contiguous()
+        output = kernel.quat_norm(inputs)
+        ctx.save_for_backward(inputs, output)
+        return output
+
+    @staticmethod
+    @custom_bwd(device_type=CUDA)
+    def backward(ctx, *grad_outputs: Tensor):
+        grad_output = grad_outputs[0]
+        inputs, output = ctx.saved_tensors
+
+        return (grad_output - (output * quat_dot(output, grad_output))) / quat_mag(inputs)
+
+
+quat_norm = _quaternion_normalize.apply
 
 
 class _quaternion_conjugate(Function):
@@ -54,11 +95,11 @@ class _quaternion_dot_product(Function):
     @staticmethod
     @custom_bwd(device_type=CUDA)
     def backward(ctx, *grad_outputs: Tensor):
-        grad_output = grad_outputs[0]  # shape: (N, 1)
+        grad_output = grad_outputs[0]
         input1, input2 = ctx.saved_tensors
 
-        grad_input1 = grad_output * input2
-        grad_input2 = grad_output * input1
+        grad_input1 = input2 * grad_output
+        grad_input2 = input1 * grad_output
         return grad_input1, grad_input2
 
 

@@ -36,6 +36,23 @@ def quat_sqsum(quat: Tensor) -> Tensor:
     return output
 
 
+def quat_mag(quat: Tensor) -> Tensor:
+    output = torch.zeros(
+        quat.shape[0], 1, dtype=quat.dtype, device=quat.device)
+    block, grid = block_grid_dim(output)
+    kernels.quaternion_magnitude(output.shape[0], quat, output,
+                                 block=block, grid=grid)
+    return output
+
+
+def quat_norm(quat: Tensor) -> Tensor:
+    output = torch.zeros_like(quat)
+    block, grid = block_grid_dim(output)
+    kernels.quaternion_normalize(output.shape[0], quat, output,
+                                 block=block, grid=grid)
+    return output
+
+
 def quat_conj(quat: Tensor) -> Tensor:
     output = torch.zeros_like(quat)
     block, grid = block_grid_dim(output)

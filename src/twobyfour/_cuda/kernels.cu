@@ -22,10 +22,46 @@ __global__ void quaternion_squared_sum(
     if (tx >= X_SIZE)
         return;
 
-    output[tx][0] = ((tens[tx][R] * tens[tx][R]) +
-                     (tens[tx][I] * tens[tx][I]) +
-                     (tens[tx][J] * tens[tx][J]) +
-                     (tens[tx][K] * tens[tx][K]));
+    output[tx][0] =
+        (tens[tx][R] * tens[tx][R]) +
+        (tens[tx][I] * tens[tx][I]) +
+        (tens[tx][J] * tens[tx][J]) +
+        (tens[tx][K] * tens[tx][K]);
+}
+
+__global__ void quaternion_magnitude(
+    const size_t X_SIZE,
+    Tensor<float, 2> tens,
+    Tensor<float, 2> output)
+{
+    const size_t tx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tx >= X_SIZE)
+        return;
+
+    output[tx][0] = sqrtf(
+        (tens[tx][R] * tens[tx][R]) +
+        (tens[tx][I] * tens[tx][I]) +
+        (tens[tx][J] * tens[tx][J]) +
+        (tens[tx][K] * tens[tx][K]));
+}
+
+__global__ void quaternion_normalize(
+    const size_t X_SIZE,
+    Tensor<float, 2> tens,
+    Tensor<float, 2> output)
+{
+    const size_t tx = blockIdx.x * blockDim.x + threadIdx.x;
+    const uint8_t tz = threadIdx.z;
+    if (tx >= X_SIZE)
+        return;
+
+    const float mag = sqrtf(
+        (tens[tx][R] * tens[tx][R]) +
+        (tens[tx][I] * tens[tx][I]) +
+        (tens[tx][J] * tens[tx][J]) +
+        (tens[tx][K] * tens[tx][K]));
+
+    output[tx][tz] = tens[tx][tz] / mag;
 }
 
 __global__ void quaternion_conjugate(
@@ -38,7 +74,8 @@ __global__ void quaternion_conjugate(
     if (tx >= X_SIZE)
         return;
 
-    output[tx][tz] = tens[tx][tz] * (1 - (2 * (tz > 0)));
+    const int8_t CONJ_SIGNS[4] = {1, -1, -1, -1};
+    output[tx][tz] = tens[tx][tz] * CONJ_SIGNS[tz];
 }
 
 __global__ void quaternion_dot_product(
@@ -51,10 +88,11 @@ __global__ void quaternion_dot_product(
     if (tx >= X_SIZE)
         return;
 
-    output[tx][0] = ((tens_1[tx][R] * tens_2[tx][R]) +
-                     (tens_1[tx][I] * tens_2[tx][I]) +
-                     (tens_1[tx][J] * tens_2[tx][J]) +
-                     (tens_1[tx][K] * tens_2[tx][K]));
+    output[tx][0] =
+        (tens_1[tx][R] * tens_2[tx][R]) +
+        (tens_1[tx][I] * tens_2[tx][I]) +
+        (tens_1[tx][J] * tens_2[tx][J]) +
+        (tens_1[tx][K] * tens_2[tx][K]);
 }
 
 __global__ void quaternion_multiply(
