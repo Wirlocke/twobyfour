@@ -15,6 +15,7 @@ Quaternion = torch.Tensor
 DualQuaternions = Tuple[Quaternion, Quaternion]
 QuaternionTranslation = Tuple[Quaternion, torch.Tensor]
 
+
 # =============================================
 # Helper Functions
 # =============================================
@@ -51,8 +52,8 @@ def quaternion_conjugate(q: Quaternion) -> Quaternion:
 
 def quaternion_mul(a: Quaternion, b: Quaternion) -> Quaternion:
     if a.is_cuda:
-        ouput_shape = torch.Size(a.shape[:-1] + (4,))
-        return tcast(cuda.quat_mul(qflat(a), qflat(b)), ouput_shape)
+        out_shape = torch.Size(a.shape[:-1] + (4,))
+        return tcast(cuda.quat_mul(qflat(a), qflat(b)), out_shape)
     else:
         return cpu._quaternion_mul_pytorch(a, b)
 
@@ -82,6 +83,7 @@ def quaternion_magnitude(q: Quaternion) -> torch.Tensor:
         squares = tcast(cuda.quat_squares(qflat(q)), out_shape)
     else:
         squares = q.pow(2).sum(-1, keepdim=True)
+
     return squares.sqrt()
 
 
