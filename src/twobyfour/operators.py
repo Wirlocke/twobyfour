@@ -20,8 +20,11 @@ QuaternionTranslation = Tuple[Quaternion, torch.Tensor]
 # =============================================
 
 
-def tcast(t, shape: torch.Size) -> torch.Tensor:
+def tensor_cast(t, shape: torch.Size) -> torch.Tensor:
     return cast(torch.Tensor, t).view(shape)
+
+
+tcast = tensor_cast
 
 
 def quat_flatten(q: Quaternion) -> torch.Tensor:
