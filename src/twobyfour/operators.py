@@ -36,8 +36,19 @@ qflat = quat_flatten
 
 
 # =============================================
-# Basic Quaternion Operations
+# Single Input Quaternion Operations
 # =============================================
+
+
+def quaternion_squares(q: Quaternion) -> torch.Tensor:
+    if q.is_cuda:
+        out_shape = torch.Size(q.shape[:-1] + (1,))
+        return tcast(cuda.quat_sqsum(qflat(q)), out_shape)
+    else:
+        return q.pow(2).sum(-1, keepdim=True)
+
+
+squardsumq = quaternion_squares
 
 
 def quaternion_conjugate(q: Quaternion) -> Quaternion:
@@ -51,12 +62,41 @@ def quaternion_conjugate(q: Quaternion) -> Quaternion:
 conjq = quaternion_conjugate
 
 
-def quaternion_multiply(a: Quaternion, b: Quaternion) -> Quaternion:
+def quaternion_magnitude(q: Quaternion) -> torch.Tensor:
+    return quaternion_squares(q).sqrt()
+
+
+magq = quaternion_magnitude
+
+
+def quaternion_inverse(q: Quaternion) -> Quaternion:
+    return quaternion_conjugate(q) / quaternion_squares(q)
+
+
+invq = quaternion_inverse
+
+
+# =============================================
+# Multi Input Quaternion Operations
+# =============================================
+
+def quaternion_dot_product(a: Quaternion, b: Quaternion) -> torch.Tensor:
     if a.is_cuda:
-        out_shape = torch.Size(a.shape[:-1] + (4,))
-        return tcast(cuda.quat_mul(qflat(a), qflat(b)), out_shape)
+        out_shape = torch.Size(a.shape[:-1] + (1,))
+        return tcast(cuda.quat_dot(qflat(a), qflat(b)), out_shape)
     else:
-        return cpu._quaternion_mul_pytorch(a, b)
+        return (a * b).sum(-1, keepdim=True)
+
+
+dotq = quaternion_dot_product
+
+
+def quaternion_multiply(left: Quaternion, right: Quaternion) -> Quaternion:
+    if left.is_cuda:
+        out_shape = torch.Size(left.shape[:-1] + (4,))
+        return tcast(cuda.quat_mul(qflat(left), qflat(right)), out_shape)
+    else:
+        return cpu._quaternion_mul_pytorch(left, right)
 
 
 mulq = quaternion_multiply
@@ -82,33 +122,6 @@ def quaternion_apply(quaternion: Quaternion, point: torch.Tensor) -> torch.Tenso
 
 
 applyq = quaternion_apply
-
-
-def quaternion_magnitude(q: Quaternion) -> torch.Tensor:
-    if q.is_cuda:
-        out_shape = torch.Size(q.shape[:-1] + (1,))
-        squares = tcast(cuda.quat_squares(qflat(q)), out_shape)
-    else:
-        squares = q.pow(2).sum(-1, keepdim=True)
-
-    return squares.sqrt()
-
-
-magq = quaternion_magnitude
-
-
-def quaternion_inverse(q: Quaternion) -> Quaternion:
-    if q.is_cuda:
-        out_shape = torch.Size(q.shape[:-1] + (1,))
-        squares = tcast(cuda.quat_squares(qflat(q)), out_shape)
-    else:
-        squares = q.pow(2).sum(-1, keepdim=True)
-
-    conj = quaternion_conjugate(q)
-    return conj / squares
-
-
-invq = quaternion_inverse
 
 
 # =============================================
@@ -152,18 +165,21 @@ def dual_quaternion_to_quaternion_translation(dq: DualQuaternions) -> DualQuater
 
     return q_r, t
 
+
 # =============================================
-# Dual Quaternion Conjugates
+# Single Input Dual Quaternion Operations
 # =============================================
+
+
+def dual_quaternion_inner_dot_product(dq: DualQuaternions) -> torch.Tensor:
+    q_r, q_d = dq
+    return quaternion_dot_product(q_r, q_d)
 
 
 def dual_quaternion_q_conjugate(dq: DualQuaternions) -> DualQuaternions:
-    r = quaternion_conjugate(dq[0])
-    d = quaternion_conjugate(dq[1])
-    return (r, d)
-
-
-dual_quaternion_inverse = dual_quaternion_q_conjugate
+    q_r = quaternion_conjugate(dq[0])
+    q_d = quaternion_conjugate(dq[1])
+    return (q_r, q_d)
 
 
 def dual_quaternion_d_conjugate(dq: DualQuaternions) -> DualQuaternions:
@@ -173,18 +189,38 @@ def dual_quaternion_d_conjugate(dq: DualQuaternions) -> DualQuaternions:
 def dual_quaternion_3rd_conjugate(dq: DualQuaternions) -> DualQuaternions:
     return dual_quaternion_d_conjugate(dual_quaternion_q_conjugate(dq))
 
+
+dual_quaternion_unit_inverse = dual_quaternion_q_conjugate
+
+
+def dual_quaternion_inverse(dq: DualQuaternions) -> DualQuaternions:
+    real, _ = dq
+
+    sq_sum_real = quaternion_squares(real)
+    inner_dot = dual_quaternion_inner_dot_product(dq)
+    conj_real, conj_dual = dual_quaternion_q_conjugate(dq)
+
+    inv_real = conj_real / sq_sum_real
+    inv_dual = (conj_dual - (2 * inner_dot * inv_real)) / sq_sum_real
+
+    return (inv_real, inv_dual)
+
+
 # =============================================
-# Dual Quaternion Operations
+# Multi Input Dual Quaternion Operations
 # =============================================
 
 
-def dual_quaternion_multiply(dq1: DualQuaternions, dq2: DualQuaternions) -> DualQuaternions:
-    q_r1, q_d1 = dq1
-    q_r2, q_d2 = dq2
+def dual_quaternion_multiply(left: DualQuaternions, right: DualQuaternions) -> DualQuaternions:
+    real_left, dual_left = left
+    real_right, dual_right = right
 
-    r_r = quaternion_multiply(q_r1, q_r2)
-    r_d = quaternion_multiply(q_r1, q_d2) + quaternion_multiply(q_d1, q_r2)
-    return (r_r, r_d)
+    real_out = quaternion_multiply(real_left, real_right)
+
+    dual_out = quaternion_multiply(real_left, dual_right) + \
+        quaternion_multiply(dual_left, real_right)
+
+    return (real_out, dual_out)
 
 
 def dual_quaternion_apply(dq: DualQuaternions, point: torch.Tensor) -> torch.Tensor:
@@ -201,6 +237,6 @@ def dual_quaternion_rectify(dq: DualQuaternions) -> DualQuaternions:
     solve: min | q - w' | s.t. w^T r = 0
     """
     q_r, q_d = dq
-    q_d = q_d - (q_r * q_d).sum(-1, keepdim=True) * q_r
+    q_d = q_d - quaternion_dot_product(q_r, q_d) * q_r
 
     return (q_r, q_d)

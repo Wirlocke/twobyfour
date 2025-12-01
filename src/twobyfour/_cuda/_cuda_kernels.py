@@ -27,11 +27,12 @@ def block_grid_dim(input: Tensor, block_x=256, block_y=1, block_z=4) -> tuple[TU
     return block, grid
 
 
-def quat_mul(left: Tensor, right: Tensor) -> Tensor:
-    output = torch.zeros_like(left)
+def quat_sqsum(quat: Tensor) -> Tensor:
+    output = torch.zeros(
+        quat.shape[0], 1, dtype=quat.dtype, device=quat.device)
     block, grid = block_grid_dim(output)
-    kernels.quaternion_mul(output.shape[0], left, right, output,
-                           block=block, grid=grid)
+    kernels.quaternion_squared_sum(output.shape[0], quat, output,
+                                   block=block, grid=grid)
     return output
 
 
@@ -43,10 +44,18 @@ def quat_conj(quat: Tensor) -> Tensor:
     return output
 
 
-def quat_squares(quat: Tensor) -> Tensor:
+def quat_dot(quat1: Tensor, quat2: Tensor) -> Tensor:
     output = torch.zeros(
-        quat.shape[0], 1, dtype=quat.dtype, device=quat.device)
+        quat1.shape[0], 1, dtype=quat1.dtype, device=quat1.device)
     block, grid = block_grid_dim(output)
-    kernels.quaternion_squares(output.shape[0], quat, output,
-                               block=block, grid=grid)
+    kernels.quaternion_dot_product(output.shape[0], quat1, quat2, output,
+                                   block=block, grid=grid)
+    return output
+
+
+def quat_mul(left: Tensor, right: Tensor) -> Tensor:
+    output = torch.zeros_like(left)
+    block, grid = block_grid_dim(output)
+    kernels.quaternion_multiply(output.shape[0], left, right, output,
+                                block=block, grid=grid)
     return output
