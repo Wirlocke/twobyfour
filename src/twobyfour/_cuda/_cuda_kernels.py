@@ -61,6 +61,14 @@ def quat_conj(quat: Tensor) -> Tensor:
     return output
 
 
+def quat_inv(quat: Tensor) -> Tensor:
+    output = torch.zeros_like(quat)
+    block, grid = block_grid_dim(output)
+    kernels.quaternion_inverse(output.shape[0], quat, output,
+                               block=block, grid=grid)
+    return output
+
+
 def quat_dot(quat1: Tensor, quat2: Tensor) -> Tensor:
     output = torch.zeros(
         quat1.shape[0], 1, dtype=quat1.dtype, device=quat1.device)

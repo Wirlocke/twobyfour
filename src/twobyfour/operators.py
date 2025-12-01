@@ -64,7 +64,7 @@ magq = quaternion_magnitude
 
 def quaternion_normalize(q: Quaternion) -> Quaternion:
     if q.is_cuda:
-        out_shape = torch.Size(q.shape[:-1] + (1,))
+        out_shape = q.shape
         return tcast(cuda.quat_norm(qflat(q)), out_shape)
     else:
         return q / quaternion_magnitude(q)
@@ -85,7 +85,11 @@ conjq = quaternion_conjugate
 
 
 def quaternion_inverse(q: Quaternion) -> Quaternion:
-    return quaternion_conjugate(q) / quaternion_squares(q)
+    if q.is_cuda:
+        out_shape = q.shape
+        return tcast(cuda.quat_inv(qflat(q)), out_shape)
+    else:
+        return quaternion_conjugate(q) / quaternion_squares(q)
 
 
 invq = quaternion_inverse
@@ -108,7 +112,7 @@ dotq = quaternion_dot_product
 
 def quaternion_multiply(left: Quaternion, right: Quaternion) -> Quaternion:
     if left.is_cuda:
-        out_shape = torch.Size(left.shape[:-1] + (4,))
+        out_shape = left.shape
         return tcast(cuda.quat_mul(qflat(left), qflat(right)), out_shape)
     else:
         return cpu._quaternion_mul_pytorch(left, right)

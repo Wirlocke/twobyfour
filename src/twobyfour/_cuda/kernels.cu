@@ -78,6 +78,25 @@ __global__ void quaternion_conjugate(
     output[tx][tz] = tens[tx][tz] * CONJ_SIGNS[tz];
 }
 
+__global__ void quaternion_inverse(
+    const size_t X_SIZE,
+    Tensor<float, 2> tens,
+    Tensor<float, 2> output)
+{
+    const size_t tx = blockIdx.x * blockDim.x + threadIdx.x;
+    const uint8_t tz = threadIdx.z;
+    if (tx >= X_SIZE)
+        return;
+
+    const int8_t CONJ_SIGNS[4] = {1, -1, -1, -1};
+
+    output[tx][tz] = (tens[tx][tz] * CONJ_SIGNS[tz]) /
+                     ((tens[tx][R] * tens[tx][R]) +
+                      (tens[tx][I] * tens[tx][I]) +
+                      (tens[tx][J] * tens[tx][J]) +
+                      (tens[tx][K] * tens[tx][K]));
+}
+
 __global__ void quaternion_dot_product(
     const size_t X_SIZE,
     Tensor<float, 2> tens_1,

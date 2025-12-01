@@ -12,7 +12,7 @@ class _quaternion_squared_sum(Function):
     @custom_fwd(device_type=CUDA)
     def forward(ctx, inputs: Tensor):
         ctx.save_for_backward(inputs)
-        return kernel.quat_sqsum(inputs.contiguous())
+        return kernel.quat_sqsum(inputs)
 
     @staticmethod
     @custom_bwd(device_type=CUDA)
@@ -72,7 +72,7 @@ class _quaternion_conjugate(Function):
     @staticmethod
     @custom_fwd(device_type=CUDA)
     def forward(ctx, inputs: Tensor):
-        return kernel.quat_conj(inputs.contiguous())
+        return kernel.quat_conj(inputs)
 
     @staticmethod
     @custom_bwd(device_type=CUDA)
@@ -83,12 +83,30 @@ class _quaternion_conjugate(Function):
 quat_conj = _quaternion_conjugate.apply
 
 
+class _quaternion_inverse(Function):
+    @staticmethod
+    @custom_fwd(device_type=CUDA)
+    def forward(ctx, inputs: Tensor):
+        output = kernel.quat_inv(inputs)
+        ctx.save_for_backward(inputs, output)
+        return output
+
+    @staticmethod
+    @custom_bwd(device_type=CUDA)
+    def backward(ctx, *grad_outputs: Tensor):
+        grad_output = grad_outputs[0]
+        inputs, output = ctx.saved_tensors
+
+        return (quat_conj(grad_output) - (2 * inputs * quat_dot(output, grad_output))) / quat_sqsum(inputs)
+
+
+quat_inv = _quaternion_inverse.apply
+
+
 class _quaternion_dot_product(Function):
     @staticmethod
     @custom_fwd(device_type=CUDA)
     def forward(ctx, input1: Tensor, input2: Tensor):
-        input1 = input1.contiguous()
-        input2 = input2.contiguous()
         ctx.save_for_backward(input1, input2)
         return kernel.quat_dot(input1, input2)
 
@@ -110,8 +128,6 @@ class _quaternion_multiply(Function):
     @staticmethod
     @custom_fwd(device_type=CUDA)
     def forward(ctx, in_left: Tensor, in_right: Tensor):
-        in_left = in_left.contiguous()
-        in_right = in_right.contiguous()
         ctx.save_for_backward(in_left, in_right)
         return kernel.quat_mul(in_left, in_right)
 
