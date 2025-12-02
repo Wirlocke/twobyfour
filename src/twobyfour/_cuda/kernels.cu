@@ -2,16 +2,24 @@
 #define I 1
 #define J 2
 #define K 3
+#define CONJ_SIGNS {1, -1, -1, -1}
 #define MUL_INDICES { \
-    {0, 1, 2, 3},     \
-    {1, 0, 3, 2},     \
-    {2, 3, 0, 1},     \
-    {3, 2, 1, 0}}
+    {R, I, J, K},     \
+    {I, R, K, J},     \
+    {J, K, R, I},     \
+    {K, J, I, R},     \
+}
 #define MUL_SIGNS {  \
     {1, -1, -1, -1}, \
     {1, 1, 1, -1},   \
     {1, -1, 1, 1},   \
-    {1, 1, -1, 1}}
+    {1, 1, -1, 1},   \
+}
+
+#define SQUARED_SUM ((tens[tx][R] * tens[tx][R]) + \
+                     (tens[tx][I] * tens[tx][I]) + \
+                     (tens[tx][J] * tens[tx][J]) + \
+                     (tens[tx][K] * tens[tx][K]))
 
 __global__ void quaternion_squared_sum(
     const size_t X_SIZE,
@@ -22,11 +30,7 @@ __global__ void quaternion_squared_sum(
     if (tx >= X_SIZE)
         return;
 
-    output[tx][0] =
-        (tens[tx][R] * tens[tx][R]) +
-        (tens[tx][I] * tens[tx][I]) +
-        (tens[tx][J] * tens[tx][J]) +
-        (tens[tx][K] * tens[tx][K]);
+    output[tx][0] = SQUARED_SUM;
 }
 
 __global__ void quaternion_magnitude(
@@ -38,11 +42,7 @@ __global__ void quaternion_magnitude(
     if (tx >= X_SIZE)
         return;
 
-    output[tx][0] = sqrtf(
-        (tens[tx][R] * tens[tx][R]) +
-        (tens[tx][I] * tens[tx][I]) +
-        (tens[tx][J] * tens[tx][J]) +
-        (tens[tx][K] * tens[tx][K]));
+    output[tx][0] = sqrtf(SQUARED_SUM);
 }
 
 __global__ void quaternion_normalize(
@@ -55,13 +55,7 @@ __global__ void quaternion_normalize(
     if (tx >= X_SIZE)
         return;
 
-    const float mag = sqrtf(
-        (tens[tx][R] * tens[tx][R]) +
-        (tens[tx][I] * tens[tx][I]) +
-        (tens[tx][J] * tens[tx][J]) +
-        (tens[tx][K] * tens[tx][K]));
-
-    output[tx][tz] = tens[tx][tz] / mag;
+    output[tx][tz] = tens[tx][tz] / sqrtf(SQUARED_SUM);
 }
 
 __global__ void quaternion_conjugate(
@@ -74,8 +68,9 @@ __global__ void quaternion_conjugate(
     if (tx >= X_SIZE)
         return;
 
-    const int8_t CONJ_SIGNS[4] = {1, -1, -1, -1};
-    output[tx][tz] = tens[tx][tz] * CONJ_SIGNS[tz];
+    const int8_t CONJ_SI = CONJ_SIGNS;
+
+    output[tx][tz] = tens[tx][tz] * CONJ_SI[tz];
 }
 
 __global__ void quaternion_inverse(
@@ -88,13 +83,9 @@ __global__ void quaternion_inverse(
     if (tx >= X_SIZE)
         return;
 
-    const int8_t CONJ_SIGNS[4] = {1, -1, -1, -1};
+    const int8_t CONJ_SI = CONJ_SIGNS;
 
-    output[tx][tz] = (tens[tx][tz] * CONJ_SIGNS[tz]) /
-                     ((tens[tx][R] * tens[tx][R]) +
-                      (tens[tx][I] * tens[tx][I]) +
-                      (tens[tx][J] * tens[tx][J]) +
-                      (tens[tx][K] * tens[tx][K]));
+    output[tx][tz] = (tens[tx][tz] * CONJ_SI[tz]) / SQUARED_SUM;
 }
 
 __global__ void quaternion_dot_product(
