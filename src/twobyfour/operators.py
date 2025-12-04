@@ -25,14 +25,16 @@ def tensor_cast(t, shape: torch.Size) -> torch.Tensor:
     return cast(torch.Tensor, t).view(shape)
 
 
-tcast = tensor_cast
+def tcast(t, shape: torch.Size) -> torch.Tensor:
+    return tensor_cast(t, shape)
 
 
 def quat_flatten(q: Quaternion) -> torch.Tensor:
     return q.contiguous().view(-1, 4)
 
 
-qflat = quat_flatten
+def qflat(q: Quaternion) -> torch.Tensor:
+    return quat_flatten(q)
 
 
 # =============================================
@@ -48,7 +50,8 @@ def quaternion_squares(q: Quaternion) -> torch.Tensor:
         return q.pow(2).sum(-1, keepdim=True)
 
 
-squardsumq = quaternion_squares
+def squardsumq(q: Quaternion) -> torch.Tensor:
+    return quaternion_squares(q)
 
 
 def quaternion_magnitude(q: Quaternion) -> torch.Tensor:
@@ -59,7 +62,8 @@ def quaternion_magnitude(q: Quaternion) -> torch.Tensor:
         return quaternion_squares(q).sqrt()
 
 
-magq = quaternion_magnitude
+def magq(q: Quaternion) -> torch.Tensor:
+    return quaternion_magnitude(q)
 
 
 def quaternion_normalize(q: Quaternion) -> Quaternion:
@@ -70,7 +74,8 @@ def quaternion_normalize(q: Quaternion) -> Quaternion:
         return q / quaternion_magnitude(q)
 
 
-normq = quaternion_normalize
+def normq(q: Quaternion) -> Quaternion:
+    return quaternion_normalize(q)
 
 
 def quaternion_conjugate(q: Quaternion) -> Quaternion:
@@ -81,7 +86,8 @@ def quaternion_conjugate(q: Quaternion) -> Quaternion:
         return cpu._quaternion_conjugate_pytorch(q)
 
 
-conjq = quaternion_conjugate
+def conjq(q: Quaternion) -> Quaternion:
+    return quaternion_conjugate(q)
 
 
 def quaternion_inverse(q: Quaternion) -> Quaternion:
@@ -92,7 +98,8 @@ def quaternion_inverse(q: Quaternion) -> Quaternion:
         return quaternion_conjugate(q) / quaternion_squares(q)
 
 
-invq = quaternion_inverse
+def invq(q: Quaternion) -> Quaternion:
+    return quaternion_inverse(q)
 
 
 # =============================================
@@ -107,7 +114,8 @@ def quaternion_dot_product(a: Quaternion, b: Quaternion) -> torch.Tensor:
         return (a * b).sum(-1, keepdim=True)
 
 
-dotq = quaternion_dot_product
+def dotq(a: Quaternion, b: Quaternion) -> torch.Tensor:
+    return quaternion_dot_product(a, b)
 
 
 def quaternion_multiply(left: Quaternion, right: Quaternion) -> Quaternion:
@@ -118,7 +126,8 @@ def quaternion_multiply(left: Quaternion, right: Quaternion) -> Quaternion:
         return cpu._quaternion_mul_pytorch(left, right)
 
 
-mulq = quaternion_multiply
+def mulq(left: Quaternion, right: Quaternion) -> Quaternion:
+    return quaternion_multiply(left, right)
 
 
 def quaternion_apply(quaternion: Quaternion, point: torch.Tensor) -> torch.Tensor:
@@ -140,7 +149,8 @@ def quaternion_apply(quaternion: Quaternion, point: torch.Tensor) -> torch.Tenso
     return out[..., 1:].contiguous()
 
 
-applyq = quaternion_apply
+def applyq(quaternion: Quaternion, point: torch.Tensor) -> torch.Tensor:
+    return quaternion_apply(quaternion, point)
 
 
 # =============================================
@@ -209,7 +219,8 @@ def dual_quaternion_3rd_conjugate(dq: DualQuaternions) -> DualQuaternions:
     return dual_quaternion_d_conjugate(dual_quaternion_q_conjugate(dq))
 
 
-dual_quaternion_unit_inverse = dual_quaternion_q_conjugate
+def dual_quaternion_unit_inverse(dq: DualQuaternions) -> DualQuaternions:
+    return dual_quaternion_q_conjugate(dq)
 
 
 def dual_quaternion_inverse(dq: DualQuaternions) -> DualQuaternions:
