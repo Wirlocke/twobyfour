@@ -25,16 +25,14 @@ def tensor_cast(t, shape: torch.Size) -> torch.Tensor:
     return cast(torch.Tensor, t).view(shape)
 
 
-def tcast(t, shape: torch.Size) -> torch.Tensor:
-    return tensor_cast(t, shape)
+tcast = tensor_cast
 
 
 def quat_flatten(q: Quaternion) -> torch.Tensor:
     return q.contiguous().view(-1, 4)
 
 
-def qflat(q: Quaternion) -> torch.Tensor:
-    return quat_flatten(q)
+qflat = quat_flatten
 
 
 # =============================================
