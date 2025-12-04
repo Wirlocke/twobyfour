@@ -48,7 +48,7 @@ def quaternion_squares(q: Quaternion) -> torch.Tensor:
         return q.pow(2).sum(-1, keepdim=True)
 
 
-def squardsumq(q: Quaternion) -> torch.Tensor:
+def squaredsumq(q: Quaternion) -> torch.Tensor:
     return quaternion_squares(q)
 
 
@@ -186,7 +186,7 @@ def quaternion_translation_to_dual_quaternion(
     return (q, q_d)
 
 
-def dual_quaternion_to_quaternion_translation(dq: DualQuaternions) -> DualQuaternions:
+def dual_quaternion_to_quaternion_translation(dq: DualQuaternions) -> QuaternionTranslation:
     q_r, q_d = dq
     t = 2*quaternion_multiply(q_d, quaternion_conjugate(q_r))[..., 1:]
 
