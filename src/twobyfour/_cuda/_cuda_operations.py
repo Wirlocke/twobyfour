@@ -3,6 +3,7 @@ from torch.autograd import Function
 from torch.amp.autocast_mode import custom_bwd, custom_fwd
 
 from . import _cuda_kernels as kernel
+from ..typing import Quaternion
 
 CUDA = 'cuda'
 
@@ -10,7 +11,7 @@ CUDA = 'cuda'
 class _quaternion_squared_sum(Function):
     @staticmethod
     @custom_fwd(device_type=CUDA)
-    def forward(ctx, inputs: Tensor):
+    def forward(ctx, inputs: Quaternion):
         ctx.save_for_backward(inputs)
         return kernel.quat_sqsum(inputs)
 
@@ -29,8 +30,7 @@ quat_sqsum = _quaternion_squared_sum.apply
 class _quaternion_magnitude(Function):
     @staticmethod
     @custom_fwd(device_type=CUDA)
-    def forward(ctx, inputs: Tensor):
-        inputs = inputs.contiguous()
+    def forward(ctx, inputs: Quaternion):
         output = kernel.quat_mag(inputs)
         ctx.save_for_backward(inputs, output)
         return output
@@ -38,7 +38,7 @@ class _quaternion_magnitude(Function):
     @staticmethod
     @custom_bwd(device_type=CUDA)
     def backward(ctx, *grad_outputs: Tensor):
-        grad_output = grad_outputs[0]  # shape: (N, 1)
+        grad_output = grad_outputs[0]
         inputs, output = ctx.saved_tensors
 
         return (inputs / output) * grad_output
@@ -50,8 +50,7 @@ quat_mag = _quaternion_magnitude.apply
 class _quaternion_normalize(Function):
     @staticmethod
     @custom_fwd(device_type=CUDA)
-    def forward(ctx, inputs: Tensor):
-        inputs = inputs.contiguous()
+    def forward(ctx, inputs: Quaternion):
         output = kernel.quat_norm(inputs)
         ctx.save_for_backward(inputs, output)
         return output
@@ -71,7 +70,7 @@ quat_norm = _quaternion_normalize.apply
 class _quaternion_conjugate(Function):
     @staticmethod
     @custom_fwd(device_type=CUDA)
-    def forward(ctx, inputs: Tensor):
+    def forward(ctx, inputs: Quaternion):
         return kernel.quat_conj(inputs)
 
     @staticmethod
@@ -86,7 +85,7 @@ quat_conj = _quaternion_conjugate.apply
 class _quaternion_inverse(Function):
     @staticmethod
     @custom_fwd(device_type=CUDA)
-    def forward(ctx, inputs: Tensor):
+    def forward(ctx, inputs: Quaternion):
         output = kernel.quat_inv(inputs)
         ctx.save_for_backward(inputs, output)
         return output
@@ -106,7 +105,7 @@ quat_inv = _quaternion_inverse.apply
 class _quaternion_dot_product(Function):
     @staticmethod
     @custom_fwd(device_type=CUDA)
-    def forward(ctx, input1: Tensor, input2: Tensor):
+    def forward(ctx, input1: Quaternion, input2: Quaternion):
         ctx.save_for_backward(input1, input2)
         return kernel.quat_dot(input1, input2)
 
@@ -127,7 +126,7 @@ quat_dot = _quaternion_dot_product.apply
 class _quaternion_multiply(Function):
     @staticmethod
     @custom_fwd(device_type=CUDA)
-    def forward(ctx, in_left: Tensor, in_right: Tensor):
+    def forward(ctx, in_left: Quaternion, in_right: Quaternion):
         ctx.save_for_backward(in_left, in_right)
         return kernel.quat_mul(in_left, in_right)
 
@@ -135,7 +134,7 @@ class _quaternion_multiply(Function):
     @custom_bwd(device_type=CUDA)
     def backward(ctx, *grad_outputs: Tensor):
         grad_output = grad_outputs[0]
-        saved_tensors: tuple[Tensor, Tensor] = ctx.saved_tensors
+        saved_tensors: tuple[Quaternion, Quaternion] = ctx.saved_tensors
         in_left, in_right = saved_tensors
 
         left_grad = quat_mul(grad_output, quat_conj(in_right))
