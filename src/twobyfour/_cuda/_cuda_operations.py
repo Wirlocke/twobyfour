@@ -1,3 +1,6 @@
+from typing import Callable
+from typing import cast
+
 from torch import Tensor
 from torch.autograd import Function
 from torch.amp.autocast_mode import custom_bwd, custom_fwd
@@ -24,7 +27,8 @@ class _quaternion_squared_sum(Function):
         return 2 * inputs * grad_output
 
 
-quat_sqsum = _quaternion_squared_sum.apply
+quat_sqsum = cast(Callable[[Quaternion], Tensor],
+                  _quaternion_squared_sum.apply)
 
 
 class _quaternion_magnitude(Function):
@@ -44,7 +48,8 @@ class _quaternion_magnitude(Function):
         return (inputs / output) * grad_output
 
 
-quat_mag = _quaternion_magnitude.apply
+quat_mag = cast(Callable[[Quaternion], Tensor],
+                _quaternion_magnitude.apply)
 
 
 class _quaternion_normalize(Function):
@@ -57,14 +62,15 @@ class _quaternion_normalize(Function):
 
     @staticmethod
     @custom_bwd(device_type=CUDA)
-    def backward(ctx, *grad_outputs: Tensor):
+    def backward(ctx, *grad_outputs: Quaternion):
         grad_output = grad_outputs[0]
         inputs, output = ctx.saved_tensors
 
         return (grad_output - (output * quat_dot(output, grad_output))) / quat_mag(inputs)
 
 
-quat_norm = _quaternion_normalize.apply
+quat_norm = cast(Callable[[Quaternion], Quaternion],
+                 _quaternion_normalize.apply)
 
 
 class _quaternion_conjugate(Function):
@@ -75,11 +81,12 @@ class _quaternion_conjugate(Function):
 
     @staticmethod
     @custom_bwd(device_type=CUDA)
-    def backward(ctx, *grad_outputs: Tensor):
+    def backward(ctx, *grad_outputs: Quaternion):
         return quat_conj(grad_outputs[0])
 
 
-quat_conj = _quaternion_conjugate.apply
+quat_conj = cast(Callable[[Quaternion], Quaternion],
+                 _quaternion_conjugate.apply)
 
 
 class _quaternion_inverse(Function):
@@ -92,14 +99,15 @@ class _quaternion_inverse(Function):
 
     @staticmethod
     @custom_bwd(device_type=CUDA)
-    def backward(ctx, *grad_outputs: Tensor):
+    def backward(ctx, *grad_outputs: Quaternion):
         grad_output = grad_outputs[0]
         inputs, output = ctx.saved_tensors
 
         return (quat_conj(grad_output) - (2 * inputs * quat_dot(output, grad_output))) / quat_sqsum(inputs)
 
 
-quat_inv = _quaternion_inverse.apply
+quat_inv = cast(Callable[[Quaternion], Quaternion],
+                _quaternion_inverse.apply)
 
 
 class _quaternion_dot_product(Function):
@@ -120,7 +128,8 @@ class _quaternion_dot_product(Function):
         return grad_input1, grad_input2
 
 
-quat_dot = _quaternion_dot_product.apply
+quat_dot = cast(Callable[[Quaternion, Quaternion], Tensor],
+                _quaternion_dot_product.apply)
 
 
 class _quaternion_multiply(Function):
@@ -132,7 +141,7 @@ class _quaternion_multiply(Function):
 
     @staticmethod
     @custom_bwd(device_type=CUDA)
-    def backward(ctx, *grad_outputs: Tensor):
+    def backward(ctx, *grad_outputs: Quaternion):
         grad_output = grad_outputs[0]
         saved_tensors: tuple[Quaternion, Quaternion] = ctx.saved_tensors
         in_left, in_right = saved_tensors
@@ -142,4 +151,5 @@ class _quaternion_multiply(Function):
         return left_grad, right_grad
 
 
-quat_mul = _quaternion_multiply.apply
+quat_mul = cast(Callable[[Quaternion, Quaternion], Quaternion],
+                _quaternion_multiply.apply)

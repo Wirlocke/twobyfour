@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 from . import operators as ops
 
 
@@ -13,9 +14,12 @@ class Quaternion(torch.Tensor):
             data = data.unsqueeze(0)
 
         if data.shape[-1] != 4:
-            raise ValueError(
-                f"Last dimension must be valid Quaternion of size 4, got shape {data.shape}"
-            )
+            if data.shape == 3:
+                data = F.pad(data, (1, 0))
+            else:
+                raise ValueError(
+                    f"Last dimension must be valid Quaternion of size 4, got shape {data.shape}"
+                )
 
         return data.as_subclass(cls)
 
@@ -55,5 +59,5 @@ class Quaternion(torch.Tensor):
     def rmulq(self, other):
         return ops.quaternion_multiply(other, self)
 
-    def applyq(self, point: torch.Tensor) -> torch.Tensor:
+    def applyq(self, point):
         return ops.quaternion_apply(self, point)
