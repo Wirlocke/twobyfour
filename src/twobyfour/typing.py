@@ -1,8 +1,8 @@
+from typing import Self
+
 import torch
 import torch.nn.functional as F
 from . import operators as ops
-
-from typing import Self
 
 
 class Quaternion(torch.Tensor):

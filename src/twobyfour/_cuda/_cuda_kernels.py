@@ -3,24 +3,27 @@
 # This source code is covered by MIT license
 # See LICENSE for the full license text.
 
+
+from typing import TYPE_CHECKING, cast
 from pathlib import Path
-from typing import cast
 
 import cutex
 import torch
-from torch import Tensor
-from torch import Size
+from torch import Tensor, Size
 
-from ..typing import Quaternion
+if TYPE_CHECKING:
+    from ..typing import Quaternion
+else:
+    Quaternion = ...
 
-DIR = Path(__file__).parent / "kernels.cu"
-
-with open(DIR, 'r') as file:
-    KERNELS = file.read()
-
-kernels = cutex.SourceModule(KERNELS, float_bits=32, boundscheck=False)
 
 TUPLE_XYZ = tuple[int, int, int]
+
+
+DIR = Path(__file__).parent / "kernels.cu"
+with open(DIR, 'r') as file:
+    KERNELS = file.read()
+kernels = cutex.SourceModule(KERNELS, float_bits=32, boundscheck=False)
 
 
 def flatten(input: Quaternion) -> tuple[Quaternion, Size]:
