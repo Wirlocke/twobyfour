@@ -4,7 +4,7 @@
 # This source code contains modifications of work covered by MIT license.
 # See LICENSE and LICENSE-dqtorch for the full license text.
 
-from typing import Tuple, cast
+from typing import Tuple
 
 import torch
 
@@ -44,10 +44,9 @@ def magq(q: Quaternion) -> torch.Tensor:
 
 def quaternion_normalize(q: Quaternion) -> Quaternion:
     if q.is_cuda:
-        out_shape = q.shape
         return cuda.quat_norm(q)
     else:
-        return cast(Quaternion, q / quaternion_magnitude(q))
+        return q / quaternion_magnitude(q)
 
 
 def normq(q: Quaternion) -> Quaternion:
@@ -56,10 +55,11 @@ def normq(q: Quaternion) -> Quaternion:
 
 def quaternion_conjugate(q: Quaternion) -> Quaternion:
     if q.is_cuda:
-        out_shape = q.shape
         return cuda.quat_conj(q)
     else:
-        return cast(Quaternion, torch.cat((q[..., 0:1], -q[..., 1:]), -1))
+        result = q.clone()
+        result[..., 1:] *= -1
+        return result
 
 
 def conjq(q: Quaternion) -> Quaternion:
@@ -68,10 +68,9 @@ def conjq(q: Quaternion) -> Quaternion:
 
 def quaternion_inverse(q: Quaternion) -> Quaternion:
     if q.is_cuda:
-        out_shape = q.shape
         return cuda.quat_inv(q)
     else:
-        return cast(Quaternion, quaternion_conjugate(q) / quaternion_squares(q))
+        return quaternion_conjugate(q) / quaternion_squares(q)
 
 
 def invq(q: Quaternion) -> Quaternion:
@@ -84,7 +83,6 @@ def invq(q: Quaternion) -> Quaternion:
 
 def quaternion_dot_product(a: Quaternion, b: Quaternion) -> torch.Tensor:
     if a.is_cuda:
-        out_shape = torch.Size(a.shape[:-1] + (1,))
         return cuda.quat_dot(a, b)
     else:
         return (a * b).sum(-1, keepdim=True)
@@ -96,19 +94,18 @@ def dotq(a: Quaternion, b: Quaternion) -> torch.Tensor:
 
 def quaternion_multiply(left: Quaternion, right: Quaternion) -> Quaternion:
     if left.is_cuda:
-        out_shape = left.shape
         return cuda.quat_mul(left, right)
     else:
         la, lb, lc, ld = left.unbind(-1)
         ra, rb, rc, rd = right.unbind(-1)
-        out = torch.stack((
+        result = torch.stack((
             la * ra - lb * rb - lc * rc - ld * rd,
             la * rb + lb * ra + lc * rd - ld * rc,
             la * rc - lb * rd + lc * ra + ld * rb,
             la * rd + lb * rc - lc * rb + ld * ra
         ), dim=-1)
 
-        return Quaternion(out)
+        return Quaternion(result)
 
 
 def mulq(left: Quaternion, right: Quaternion) -> Quaternion:
@@ -133,18 +130,18 @@ def applyq(quaternion: Quaternion, point: Quaternion) -> Quaternion:
 
 def quaternion_translation_apply(q: Quaternion, t: Quaternion, point: Quaternion) -> Quaternion:
     p = quaternion_apply(q, point)
-    return cast(Quaternion, p + t)
+    return p + t
 
 
 def quaternion_translation_compose(qt1: QuaternionTranslation, qt2: QuaternionTranslation) -> QuaternionTranslation:
     qr = quaternion_multiply(qt1[0], qt2[0])
-    t = cast(Quaternion, quaternion_apply(qt1[0], qt2[1]) + qt1[1])
+    t = quaternion_apply(qt1[0], qt2[1]) + qt1[1]
     return (qr, t)
 
 
 def quaternion_translation_inverse(q: Quaternion, t: Quaternion) -> QuaternionTranslation:
     q_inv = quaternion_conjugate(q)
-    t_inv = quaternion_apply(q_inv, cast(Quaternion, -t))
+    t_inv = quaternion_apply(q_inv, -t)
     return q_inv, t_inv
 
 # =============================================
@@ -152,12 +149,11 @@ def quaternion_translation_inverse(q: Quaternion, t: Quaternion) -> QuaternionTr
 # =============================================
 
 
-def quaternion_translation_to_dual_quaternion(
-        q: Quaternion, t: Quaternion) -> DualQuaternions:
+def quaternion_translation_to_dual_quaternion(q: Quaternion, t: Quaternion) -> DualQuaternions:
     '''
     https://cs.gmu.edu/~jmlien/teaching/cs451/uploads/Main/dual-quaternion.pdf
     '''
-    q_d = cast(Quaternion, 0.5 * quaternion_multiply(t, q))
+    q_d = 0.5 * quaternion_multiply(t, q)
     return (q, q_d)
 
 
@@ -165,7 +161,7 @@ def dual_quaternion_to_quaternion_translation(dq: DualQuaternions) -> Quaternion
     q_r, q_d = dq
     t = 2*quaternion_multiply(q_d, quaternion_conjugate(q_r))
 
-    return q_r, cast(Quaternion, t)
+    return q_r, t
 
 
 # =============================================
@@ -185,7 +181,7 @@ def dual_quaternion_q_conjugate(dq: DualQuaternions) -> DualQuaternions:
 
 
 def dual_quaternion_d_conjugate(dq: DualQuaternions) -> DualQuaternions:
-    return (dq[0], cast(Quaternion, -dq[1]))
+    return (dq[0], -dq[1])
 
 
 def dual_quaternion_3rd_conjugate(dq: DualQuaternions) -> DualQuaternions:
@@ -203,9 +199,8 @@ def dual_quaternion_inverse(dq: DualQuaternions) -> DualQuaternions:
     inner_dot = dual_quaternion_inner_dot_product(dq)
     conj_real, conj_dual = dual_quaternion_q_conjugate(dq)
 
-    inv_real = cast(Quaternion, conj_real / sq_sum_real)
-    inv_dual = cast(
-        Quaternion, (conj_dual - (2 * inner_dot * inv_real)) / sq_sum_real)
+    inv_real = conj_real / sq_sum_real
+    inv_dual = (conj_dual - (2 * inner_dot * inv_real)) / sq_sum_real
 
     return (inv_real, inv_dual)
 
@@ -221,8 +216,8 @@ def dual_quaternion_multiply(left: DualQuaternions, right: DualQuaternions) -> D
 
     real_out = quaternion_multiply(real_left, real_right)
 
-    dual_out = cast(Quaternion, quaternion_multiply(real_left, dual_right) +
-                    quaternion_multiply(dual_left, real_right))
+    dual_out = quaternion_multiply(real_left, dual_right) \
+        + quaternion_multiply(dual_left, real_right)
 
     return (real_out, dual_out)
 
@@ -241,6 +236,6 @@ def dual_quaternion_rectify(dq: DualQuaternions) -> DualQuaternions:
     solve: min | q - w' | s.t. w^T r = 0
     """
     q_r, q_d = dq
-    q_d = cast(Quaternion, q_d - quaternion_dot_product(q_r, q_d) * q_r)
+    q_d = q_d - quaternion_dot_product(q_r, q_d) * q_r
 
     return (q_r, q_d)
