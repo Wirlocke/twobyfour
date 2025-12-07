@@ -98,17 +98,20 @@ __global__ void quaternion_dot_product(
     if (tx >= X_SIZE)
         return;
 
+    const size_t tx1 = min(tx, tens_1.size(0) - 1);
+    const size_t tx2 = min(tx, tens_2.size(0) - 1);
+
     output[tx][0] =
-        (tens_1[tx][R] * tens_2[tx][R]) +
-        (tens_1[tx][I] * tens_2[tx][I]) +
-        (tens_1[tx][J] * tens_2[tx][J]) +
-        (tens_1[tx][K] * tens_2[tx][K]);
+        (tens_1[tx1][R] * tens_2[tx2][R]) +
+        (tens_1[tx1][I] * tens_2[tx2][I]) +
+        (tens_1[tx1][J] * tens_2[tx2][J]) +
+        (tens_1[tx1][K] * tens_2[tx2][K]);
 }
 
 __global__ void quaternion_multiply(
     const size_t X_SIZE,
-    Tensor<float, 2> tens_1,
-    Tensor<float, 2> tens_2,
+    Tensor<float, 2> tens_left,
+    Tensor<float, 2> tens_right,
     Tensor<float, 2> output)
 {
     const size_t tx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -116,12 +119,15 @@ __global__ void quaternion_multiply(
     if (tx >= X_SIZE)
         return;
 
+    const size_t txl = min(tx, tens_left.size(0) - 1);
+    const size_t txr = min(tx, tens_right.size(0) - 1);
+
     const uint8_t IN[4][4] = MUL_INDICES;
     const int8_t SI[4][4] = MUL_SIGNS;
 
     output[tx][tz] =
-        (tens_1[tx][R] * tens_2[tx][IN[tz][R]] * SI[tz][R]) +
-        (tens_1[tx][I] * tens_2[tx][IN[tz][I]] * SI[tz][I]) +
-        (tens_1[tx][J] * tens_2[tx][IN[tz][J]] * SI[tz][J]) +
-        (tens_1[tx][K] * tens_2[tx][IN[tz][K]] * SI[tz][K]);
+        (tens_left[txl][R] * tens_right[txr][IN[tz][R]] * SI[tz][R]) +
+        (tens_left[txl][I] * tens_right[txr][IN[tz][I]] * SI[tz][I]) +
+        (tens_left[txl][J] * tens_right[txr][IN[tz][J]] * SI[tz][J]) +
+        (tens_left[txl][K] * tens_right[txr][IN[tz][K]] * SI[tz][K]);
 }

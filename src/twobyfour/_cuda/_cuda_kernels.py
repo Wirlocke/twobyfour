@@ -23,13 +23,9 @@ kernels = cutex.SourceModule(KERNELS, float_bits=32, boundscheck=False)
 TUPLE_XYZ = tuple[int, int, int]
 
 
-def castq(input) -> Quaternion:
-    return cast(Quaternion, input)
-
-
 def flatten(input: Quaternion) -> tuple[Quaternion, Size]:
     out_shape = input.shape
-    return castq(input.contiguous().view(-1, 4)), out_shape
+    return cast(Quaternion, input.contiguous().view(-1, 4)), out_shape
 
 
 def block_grid_dim(input: Tensor, block_x=256, block_y=1, block_z=4) -> tuple[TUPLE_XYZ, TUPLE_XYZ]:
@@ -99,25 +95,30 @@ def quat_inv(quat: Quaternion) -> Quaternion:
 
 
 def quat_dot(quat1: Quaternion, quat2: Quaternion) -> Tensor:
-    quat1, out_shape = flatten(quat1)
-    quat2, _ = flatten(quat2)
-    output = torch.zeros(quat1.shape[0], 1,
-                         dtype=quat1.dtype, device=quat1.device)
+    quat1, shape1 = flatten(quat1)
+    quat2, shape2 = flatten(quat2)
+
+    out_shape = torch.broadcast_shapes(shape1, shape2)[:-1] + (1,)
+    output = torch.zeros(out_shape,
+                         dtype=quat1.dtype, device=quat1.device).view(-1, 4)
 
     block, grid = block_grid_dim(output)
-    kernels.quaternion_dot_product(output.shape[0], quat1, quat2, output,
+    kernels.quaternion_dot_product(out_shape[0], quat1, quat2, output,
                                    block=block, grid=grid)
 
-    return output.view(out_shape[:-1] + (1,))
+    return output.view(out_shape)
 
 
 def quat_mul(left: Quaternion, right: Quaternion) -> Quaternion:
-    left, out_shape = flatten(left)
-    right, _ = flatten(right)
-    output = torch.zeros_like(left)
+    left, shape_left = flatten(left)
+    right, shape_right = flatten(right)
+
+    out_shape = torch.broadcast_shapes(shape_left, shape_right)
+    output = torch.zeros(out_shape,
+                         dtype=left.dtype, device=left.device).view(-1, 4)
 
     block, grid = block_grid_dim(output)
-    kernels.quaternion_multiply(output.shape[0], left, right, output,
+    kernels.quaternion_multiply(out_shape[0], left, right, output,
                                 block=block, grid=grid)
 
     return Quaternion(output.view(out_shape))
