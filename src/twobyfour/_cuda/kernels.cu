@@ -2,7 +2,7 @@
 #define I 1
 #define J 2
 #define K 3
-#define CONJ_SIGNS {1, -1, -1, -1}
+#define CONJ_SIGN (1 - (2 * (tz != 0)))
 #define MUL_INDICES { \
     {R, I, J, K},     \
     {I, R, K, J},     \
@@ -68,9 +68,7 @@ __global__ void quaternion_conjugate(
     if (tx >= X_SIZE)
         return;
 
-    const int8_t CONJ_SI[4] = CONJ_SIGNS;
-
-    output[tx][tz] = tens[tx][tz] * CONJ_SI[tz];
+    output[tx][tz] = tens[tx][tz] * CONJ_SIGN;
 }
 
 __global__ void quaternion_inverse(
@@ -83,9 +81,7 @@ __global__ void quaternion_inverse(
     if (tx >= X_SIZE)
         return;
 
-    const int8_t CONJ_SI[4] = CONJ_SIGNS;
-
-    output[tx][tz] = (tens[tx][tz] * CONJ_SI[tz]) / SQUARED_SUM;
+    output[tx][tz] = (tens[tx][tz] * CONJ_SIGN) / SQUARED_SUM;
 }
 
 __global__ void quaternion_dot_product(

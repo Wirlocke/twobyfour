@@ -39,7 +39,7 @@ def block_grid_dim(input: Tensor, block_x=256, block_y=1, block_z=4) -> tuple[TU
 
 def quat_sqsum(quat: Quaternion) -> Tensor:
     quat, out_shape = flatten(quat)
-    output = torch.zeros(quat.shape[0], 1,
+    output = torch.empty(quat.shape[0], 1,
                          dtype=quat.dtype, device=quat.device)
 
     block, grid = block_grid_dim(output)
@@ -51,7 +51,7 @@ def quat_sqsum(quat: Quaternion) -> Tensor:
 
 def quat_mag(quat: Quaternion) -> Tensor:
     quat, out_shape = flatten(quat)
-    output = torch.zeros(quat.shape[0], 1,
+    output = torch.empty(quat.shape[0], 1,
                          dtype=quat.dtype, device=quat.device)
 
     block, grid = block_grid_dim(output)
@@ -63,7 +63,7 @@ def quat_mag(quat: Quaternion) -> Tensor:
 
 def quat_norm(quat: Quaternion) -> Quaternion:
     quat, out_shape = flatten(quat)
-    output = torch.zeros_like(quat)
+    output = torch.empty_like(quat)
 
     block, grid = block_grid_dim(output)
     kernels.quaternion_normalize(output.shape[0], quat, output,
@@ -74,7 +74,7 @@ def quat_norm(quat: Quaternion) -> Quaternion:
 
 def quat_conj(quat: Quaternion) -> Quaternion:
     quat, out_shape = flatten(quat)
-    output = torch.zeros_like(quat)
+    output = torch.empty_like(quat)
 
     block, grid = block_grid_dim(output)
     kernels.quaternion_conjugate(output.shape[0], quat, output,
@@ -85,7 +85,7 @@ def quat_conj(quat: Quaternion) -> Quaternion:
 
 def quat_inv(quat: Quaternion) -> Quaternion:
     quat, out_shape = flatten(quat)
-    output = torch.zeros_like(quat)
+    output = torch.empty_like(quat)
 
     block, grid = block_grid_dim(output)
     kernels.quaternion_inverse(output.shape[0], quat, output,
@@ -99,7 +99,7 @@ def quat_dot(quat1: Quaternion, quat2: Quaternion) -> Tensor:
     quat2, shape2 = flatten(quat2)
 
     out_shape = torch.broadcast_shapes(shape1, shape2)[:-1] + (1,)
-    output = torch.zeros(out_shape,
+    output = torch.empty(out_shape,
                          dtype=quat1.dtype, device=quat1.device).view(-1, 1)
 
     block, grid = block_grid_dim(output)
@@ -114,7 +114,7 @@ def quat_mul(left: Quaternion, right: Quaternion) -> Quaternion:
     right, shape_right = flatten(right)
 
     out_shape = torch.broadcast_shapes(shape_left, shape_right)
-    output = torch.zeros(out_shape,
+    output = torch.empty(out_shape,
                          dtype=left.dtype, device=left.device).view(-1, 4)
 
     block, grid = block_grid_dim(output)
