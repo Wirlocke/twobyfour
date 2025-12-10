@@ -4,8 +4,6 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor, contiguous_format
 
-from . import operators as ops
-
 
 def invalid(data: Tensor) -> bool:
     return not (data.ndim >= 2 and data.shape[-1] == 4)
@@ -89,28 +87,37 @@ class Quaternion(torch.Tensor):
                  memory_format=None) -> Self: ...
 
     def squaredsumq(self) -> Tensor:
+        from . import operators as ops
         return ops.quaternion_squares(self)
 
     def magq(self) -> Tensor:
+        from . import operators as ops
         return ops.quaternion_magnitude(self)
 
     def normq(self) -> "Quaternion":
+        from . import operators as ops
         return ops.quaternion_normalize(self)
 
     def conjq(self) -> "Quaternion":
+        from . import operators as ops
         return ops.quaternion_conjugate(self)
 
     def invq(self) -> "Quaternion":
+        from . import operators as ops
         return ops.quaternion_inverse(self)
 
     def dotq(self, other) -> Tensor:
+        from . import operators as ops
         return ops.quaternion_dot_product(self, other)
 
     def mulq(self, other) -> "Quaternion":
+        from . import operators as ops
         return ops.quaternion_multiply(self, other)
 
     def rmulq(self, other) -> "Quaternion":
+        from . import operators as ops
         return ops.quaternion_multiply(other, self)
 
     def applyq(self, point) -> "Quaternion":
+        from . import operators as ops
         return ops.quaternion_apply(self, point)

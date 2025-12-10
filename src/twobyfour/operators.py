@@ -4,14 +4,13 @@
 # This source code contains modifications of work covered by MIT license.
 # See LICENSE and LICENSE-dqtorch for the full license text.
 
-from typing import TYPE_CHECKING, Tuple
+from typing import Tuple
 
 import torch
 from torch import Tensor
 
-from ._cuda import _cuda_operations as cuda
 from .typing import Quaternion
-
+from ._cuda import _cuda_operations as cuda
 
 
 DualQuaternions = Tuple[Quaternion, Quaternion]

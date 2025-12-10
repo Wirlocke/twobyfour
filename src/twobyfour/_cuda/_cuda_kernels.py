@@ -4,7 +4,7 @@
 # See LICENSE for the full license text.
 
 
-from typing import TYPE_CHECKING, cast
+from typing import cast
 from pathlib import Path
 
 import cutex

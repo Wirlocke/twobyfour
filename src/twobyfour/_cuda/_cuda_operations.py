@@ -1,11 +1,12 @@
-from typing import TYPE_CHECKING, cast, Callable
+from typing import cast, Callable
 
 from torch import Tensor
 from torch.autograd import Function
 from torch.amp.autocast_mode import custom_bwd, custom_fwd
 
-from . import _cuda_kernels as kernel
 from ..typing import Quaternion
+from . import _cuda_kernels as kernel
+
 
 CUDA = 'cuda'
 
