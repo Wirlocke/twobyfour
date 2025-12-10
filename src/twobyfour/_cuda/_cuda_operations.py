@@ -5,12 +5,7 @@ from torch.autograd import Function
 from torch.amp.autocast_mode import custom_bwd, custom_fwd
 
 from . import _cuda_kernels as kernel
-if TYPE_CHECKING:
-    from ..typing import Quaternion
-else:
-    Quaternion = ...
-    
-
+from ..typing import Quaternion
 
 CUDA = 'cuda'
 

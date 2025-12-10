@@ -7,12 +7,11 @@
 from typing import TYPE_CHECKING, Tuple
 
 import torch
+from torch import Tensor
 
 from ._cuda import _cuda_operations as cuda
-if TYPE_CHECKING:
-    from .typing import Quaternion
-else:
-    Quaternion = ...
+from .typing import Quaternion
+
 
 
 DualQuaternions = Tuple[Quaternion, Quaternion]
@@ -24,25 +23,25 @@ QuaternionTranslation = Tuple[Quaternion, Quaternion]
 # =============================================
 
 
-def quaternion_squares(q: Quaternion) -> torch.Tensor:
+def quaternion_squares(q: Quaternion) -> Tensor:
     if q.is_cuda:
         return cuda.quat_sqsum(q)
     else:
         return q.pow(2).sum(-1, keepdim=True)
 
 
-def squaredsumq(q: Quaternion) -> torch.Tensor:
+def squaredsumq(q: Quaternion) -> Tensor:
     return quaternion_squares(q)
 
 
-def quaternion_magnitude(q: Quaternion) -> torch.Tensor:
+def quaternion_magnitude(q: Quaternion) -> Tensor:
     if q.is_cuda:
         return cuda.quat_mag(q)
     else:
         return quaternion_squares(q).sqrt()
 
 
-def magq(q: Quaternion) -> torch.Tensor:
+def magq(q: Quaternion) -> Tensor:
     return quaternion_magnitude(q)
 
 
@@ -85,14 +84,14 @@ def invq(q: Quaternion) -> Quaternion:
 # Multi Input Quaternion Operations
 # =============================================
 
-def quaternion_dot_product(a: Quaternion, b: Quaternion) -> torch.Tensor:
+def quaternion_dot_product(a: Quaternion, b: Quaternion) -> Tensor:
     if a.is_cuda:
         return cuda.quat_dot(a, b)
     else:
-        return (a * b).sum(-1, keepdim=True)
+        return a.mul(b).sum(-1, keepdim=True)
 
 
-def dotq(a: Quaternion, b: Quaternion) -> torch.Tensor:
+def dotq(a: Quaternion, b: Quaternion) -> Tensor:
     return quaternion_dot_product(a, b)
 
 
@@ -108,7 +107,6 @@ def quaternion_multiply(left: Quaternion, right: Quaternion) -> Quaternion:
             la * rc - lb * rd + lc * ra + ld * rb,
             la * rd + lb * rc - lc * rb + ld * ra
         ), dim=-1)
-
         return Quaternion(result)
 
 
@@ -173,7 +171,7 @@ def dual_quaternion_to_quaternion_translation(dq: DualQuaternions) -> Quaternion
 # =============================================
 
 
-def dual_quaternion_inner_dot_product(dq: DualQuaternions) -> torch.Tensor:
+def dual_quaternion_inner_dot_product(dq: DualQuaternions) -> Tensor:
     q_r, q_d = dq
     return quaternion_dot_product(q_r, q_d)
 
@@ -226,7 +224,7 @@ def dual_quaternion_multiply(left: DualQuaternions, right: DualQuaternions) -> D
     return (real_out, dual_out)
 
 
-def dual_quaternion_apply(dq: DualQuaternions, point: Quaternion) -> torch.Tensor:
+def dual_quaternion_apply(dq: DualQuaternions, point: Quaternion) -> Tensor:
     """
     assuming the input dual quaternion is normalized.
     """

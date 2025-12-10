@@ -11,10 +11,7 @@ import cutex
 import torch
 from torch import Tensor, Size
 
-if TYPE_CHECKING:
-    from ..typing import Quaternion
-else:
-    Quaternion = ...
+from ..typing import Quaternion
 
 
 TUPLE_XYZ = tuple[int, int, int]
@@ -103,7 +100,7 @@ def quat_dot(quat1: Quaternion, quat2: Quaternion) -> Tensor:
 
     out_shape = torch.broadcast_shapes(shape1, shape2)[:-1] + (1,)
     output = torch.zeros(out_shape,
-                         dtype=quat1.dtype, device=quat1.device).view(-1, 4)
+                         dtype=quat1.dtype, device=quat1.device).view(-1, 1)
 
     block, grid = block_grid_dim(output)
     kernels.quaternion_dot_product(out_shape[0], quat1, quat2, output,
