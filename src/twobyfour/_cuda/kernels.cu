@@ -68,7 +68,7 @@ __global__ void quaternion_conjugate(
     if (tx >= X_SIZE)
         return;
 
-    const int8_t CONJ_SI = CONJ_SIGNS;
+    const int8_t CONJ_SI[4] = CONJ_SIGNS;
 
     output[tx][tz] = tens[tx][tz] * CONJ_SI[tz];
 }
@@ -83,7 +83,7 @@ __global__ void quaternion_inverse(
     if (tx >= X_SIZE)
         return;
 
-    const int8_t CONJ_SI = CONJ_SIGNS;
+    const int8_t CONJ_SI[4] = CONJ_SIGNS;
 
     output[tx][tz] = (tens[tx][tz] * CONJ_SI[tz]) / SQUARED_SUM;
 }
