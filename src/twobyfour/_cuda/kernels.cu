@@ -15,9 +15,6 @@
     {1, 1, -1, 1},   \
 }
 
-__constant__ int INDEX[4][4] = MUL_INDICES;
-__constant__ int SIGN[4][4] = MUL_SIGNS;
-
 __global__ void quaternion_multiply(
     const size_t X_SIZE,
     Tensor<float, 2> tens_left,
@@ -31,6 +28,9 @@ __global__ void quaternion_multiply(
 
     const size_t txl = min(tx, tens_left.size(0) - 1);
     const size_t txr = min(tx, tens_right.size(0) - 1);
+
+    const uint8_t INDEX[4][4] = MUL_INDICES;
+    const int8_t SIGN[4][4] = MUL_SIGNS;
 
     output[tx][tz] =
         (tens_left[txl][R] * tens_right[txr][INDEX[tz][R]] * SIGN[tz][R]) +
