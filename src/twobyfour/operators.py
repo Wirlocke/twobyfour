@@ -23,21 +23,15 @@ QuaternionTranslation = Tuple[Quaternion, Quaternion]
 
 
 def quaternion_squares(q: Quaternion) -> Tensor:
-    if q.is_cuda:
-        return cuda.quat_sqsum(q)
-    else:
-        return q.pow(2).sum(-1, keepdim=True)
+    return q.square().sum(-1, keepdim=True)
 
 
-def squaredsumq(q: Quaternion) -> Tensor:
+def sqsumq(q: Quaternion) -> Tensor:
     return quaternion_squares(q)
 
 
 def quaternion_magnitude(q: Quaternion) -> Tensor:
-    if q.is_cuda:
-        return cuda.quat_mag(q)
-    else:
-        return quaternion_squares(q).sqrt()
+    return q.norm(dim=-1, keepdim=True)
 
 
 def magq(q: Quaternion) -> Tensor:
@@ -45,10 +39,7 @@ def magq(q: Quaternion) -> Tensor:
 
 
 def quaternion_normalize(q: Quaternion) -> Quaternion:
-    if q.is_cuda:
-        return cuda.quat_norm(q)
-    else:
-        return q / quaternion_magnitude(q)
+    return q / quaternion_magnitude(q)
 
 
 def normq(q: Quaternion) -> Quaternion:
@@ -56,12 +47,9 @@ def normq(q: Quaternion) -> Quaternion:
 
 
 def quaternion_conjugate(q: Quaternion) -> Quaternion:
-    if q.is_cuda:
-        return cuda.quat_conj(q)
-    else:
-        result = q.clone()
-        result[..., 1:] *= -1
-        return result
+    result = q.clone()
+    result[..., 1:] *= -1
+    return result
 
 
 def conjq(q: Quaternion) -> Quaternion:
@@ -69,10 +57,7 @@ def conjq(q: Quaternion) -> Quaternion:
 
 
 def quaternion_inverse(q: Quaternion) -> Quaternion:
-    if q.is_cuda:
-        return cuda.quat_inv(q)
-    else:
-        return quaternion_conjugate(q) / quaternion_squares(q)
+    return quaternion_conjugate(q) / quaternion_squares(q)
 
 
 def invq(q: Quaternion) -> Quaternion:
@@ -84,10 +69,7 @@ def invq(q: Quaternion) -> Quaternion:
 # =============================================
 
 def quaternion_dot_product(a: Quaternion, b: Quaternion) -> Tensor:
-    if a.is_cuda:
-        return cuda.quat_dot(a, b)
-    else:
-        return a.mul(b).sum(-1, keepdim=True)
+    return (a * b).sum(-1, keepdim=True)
 
 
 def dotq(a: Quaternion, b: Quaternion) -> Tensor:
