@@ -24,13 +24,15 @@ kernels = cutex.SourceModule(KERNELS, float_bits=32, boundscheck=False)
 
 
 def flatten(input: Quaternion) -> tuple[Quaternion, Size]:
-    out_shape = input.shape
-    return cast(Quaternion, input.contiguous().view(-1, 4)), out_shape
+    return cast(Quaternion, input.contiguous().view(-1, 4)), input.shape
 
 
 def block_grid_dim(input: Tensor, block_x=256, block_y=1, block_z=4) -> tuple[TUPLE_XYZ, TUPLE_XYZ]:
-    grid_x = -(input.shape[0] // -block_x)
-    grid_y = -(input.shape[1] // -block_x) if block_y != 1 else 1
+    grid_x = -(input.shape[0] // -block_x) \
+        if not input.shape[0] <= block_x else 1
+
+    grid_y = -(input.shape[1] // -block_x) \
+        if block_y != 1 else 1
 
     block = (block_x, block_y, block_z)
     grid = (grid_x, grid_y, 1)
