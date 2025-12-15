@@ -12,7 +12,7 @@ from torch import Tensor
 from . import _C  # type: ignore
 from .typing import Quaternion
 
-tupleTensor = tuple[Tensor, Tensor]
+tupleTensor2 = tuple[Tensor, Tensor]
 
 
 @torch.library.register_fake("twobyfour::quaternion_multiply")
@@ -29,7 +29,7 @@ quaternion_multiply = cast(Callable[[Tensor, Tensor], Tensor],
 
 
 def _quat_mul_backward(ctx, grad: Tensor):
-    left, right = cast(tupleTensor, ctx.saved_tensors)
+    left, right = cast(tupleTensor2, ctx.saved_tensors)
     left[..., 1:] *= -1
     right[..., 1:] *= -1
 
@@ -41,7 +41,7 @@ def _quat_mul_backward(ctx, grad: Tensor):
     return grad_left, grad_right, None
 
 
-def _quat_mul_setup_context(ctx, inputs: tupleTensor, output):
+def _quat_mul_setup_context(ctx, inputs: tupleTensor2, output):
     left, right = inputs
 
     saved_left, saved_right = None, None
@@ -57,7 +57,7 @@ torch.library.register_autograd("twobyfour::quaternion_multiply",
 
 
 def quat_mul(left: Quaternion, right: Quaternion) -> Quaternion:
-    leftbc, rightbc = cast(tuple[Tensor, Tensor],
+    leftbc, rightbc = cast(tupleTensor2,
                            torch.broadcast_tensors(left, right))
 
     output = quaternion_multiply(leftbc.contiguous(), rightbc.contiguous())
