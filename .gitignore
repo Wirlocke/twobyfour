@@ -1,5 +1,7 @@
 **/__pycache__/
-test.py
-archive/
+build/
 .venv/
+
+*.pyd
 copilot-instructions.md
+test.py
