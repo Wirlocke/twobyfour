@@ -9,9 +9,8 @@ from typing import cast, Callable
 import torch
 from torch import Tensor
 
-from .. import _C  # type: ignore
-from ..typing import Quaternion
-from .. import operators as ops
+from . import _C  # type: ignore
+from .typing import Quaternion
 
 tupleTensor = tuple[Tensor, Tensor]
 

@@ -10,7 +10,7 @@ import torch
 from torch import Tensor
 
 from .typing import Quaternion
-from ._cuda import _cuda_kernels as cuda
+from . import _cuda_kernels as cuda
 
 
 DualQuaternions = Tuple[Quaternion, Quaternion]
