@@ -24,8 +24,8 @@ def _(left: Tensor, right: Tensor) -> Tensor:
     return torch.empty_like(left)
 
 
-quaternion_multiply = cast(Callable[[Tensor, Tensor], Tensor],
-                           torch.ops.twobyfour.quaternion_multiply)
+_quaternion_multiply = cast(Callable[[Tensor, Tensor], Tensor],
+                            torch.ops.twobyfour.quaternion_multiply)
 
 
 def _quat_mul_backward(ctx, grad: Tensor):
@@ -35,9 +35,9 @@ def _quat_mul_backward(ctx, grad: Tensor):
 
     grad_left, grad_right = None, None
     if ctx.needs_input_grad[0]:
-        grad_left = quaternion_multiply(grad.contiguous(), right.contiguous())
+        grad_left = _quaternion_multiply(grad.contiguous(), right.contiguous())
     if ctx.needs_input_grad[1]:
-        grad_right = quaternion_multiply(left.contiguous(), grad.contiguous())
+        grad_right = _quaternion_multiply(left.contiguous(), grad.contiguous())
     return grad_left, grad_right, None
 
 
@@ -60,5 +60,5 @@ def quat_mul(left: Quaternion, right: Quaternion) -> Quaternion:
     leftbc, rightbc = cast(tupleTensor2,
                            torch.broadcast_tensors(left, right))
 
-    output = quaternion_multiply(leftbc.contiguous(), rightbc.contiguous())
+    output = _quaternion_multiply(leftbc.contiguous(), rightbc.contiguous())
     return Quaternion(output)
