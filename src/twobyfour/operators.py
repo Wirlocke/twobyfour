@@ -96,10 +96,13 @@ def mulq(left: Quaternion, right: Quaternion) -> Quaternion:
 
 
 def quaternion_apply(quaternion: Quaternion, point: Quaternion) -> Quaternion:
-    return quaternion_multiply(
-        quaternion_multiply(quaternion, point),
-        quaternion_conjugate(quaternion)
-    )
+    if quaternion.is_cuda:
+        return cuda.quat_apply(quaternion, point)
+    else:
+        return quaternion_multiply(
+            quaternion_multiply(quaternion, point),
+            quaternion_conjugate(quaternion)
+        )
 
 
 def applyq(quaternion: Quaternion, point: Quaternion) -> Quaternion:

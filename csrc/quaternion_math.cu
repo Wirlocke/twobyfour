@@ -29,8 +29,23 @@
     {1, 1, -1, 1},   \
 }
 
+#define X 0
+#define Y 1
+#define Z 2
+#define CROSS_PRODUCT(ptr1, ptr2) {            \
+    (ptr1[Y] * ptr2[Z]) - (ptr1[Z] * ptr2[Y]), \
+    (ptr1[Z] * ptr2[X]) - (ptr1[X] * ptr2[Z]), \
+    (ptr1[X] * ptr2[Y]) - (ptr1[Y] * ptr2[X]), \
+}
+
 namespace twobyfour
 {
+    /*
+    =============================================
+    Quaternion Multiply
+    =============================================
+    */
+
     static __constant__ uint8_t INDEX[4][4] = MUL_INDICES;
     static __constant__ int8_t SIGN[4][4] = MUL_SIGNS;
 
@@ -89,13 +104,84 @@ namespace twobyfour
         return result;
     }
 
+    /*
+    =============================================
+    Quaternion Apply
+    =============================================
+    */
+
+    __global__ void quaternion_apply_kernel(
+        size_t numel,
+        const float *quat,
+        const float *point,
+        float *__restrict__ result)
+    {
+        const size_t qx = ((blockIdx.x * blockDim.x) + threadIdx.x) * QUAT_STRIDE;
+        if (qx >= numel)
+            return;
+
+        const float *quat_v = &quat[qx + 1];
+        const float *point_v = &point[qx + 1];
+        const float cross_prod[3] = CROSS_PRODUCT(quat_v, point_v);
+        const float cross_cross_prod[3] = CROSS_PRODUCT(quat_v, cross_prod);
+
+        result[qx + R] = point[qx + R];
+        result[qx + I] = point_v[X] + (2 * quat[qx + R] * cross_prod[X]) + (2 * cross_cross_prod[X]);
+        result[qx + J] = point_v[Y] + (2 * quat[qx + R] * cross_prod[Y]) + (2 * cross_cross_prod[Y]);
+        result[qx + K] = point_v[Z] + (2 * quat[qx + R] * cross_prod[Z]) + (2 * cross_cross_prod[Z]);
+    }
+
+    at::Tensor quaternion_apply_cuda(
+        const at::Tensor &tens_quat,
+        const at::Tensor &tens_point)
+    {
+        TORCH_CHECK(tens_quat.sizes() == tens_point.sizes())
+        VALID(tens_quat)
+        VALID(tens_point)
+
+        at::Tensor result = at::empty_like(tens_point);
+
+        const float *quat_ptr = tens_quat.data_ptr<float>();
+        const float *point_ptr = tens_point.data_ptr<float>();
+        float *result_ptr = result.data_ptr<float>();
+
+        const size_t numel = result.numel();
+        TORCH_CHECK(numel % 4 == 0, "Input length must be divisible by 4.");
+        if (numel == 0)
+        {
+            return result;
+        }
+        const size_t num_quats = numel / QUAT_STRIDE;
+
+        const int threads = 256;
+        const int threads_x = threads / QUAT_STRIDE;
+        dim3 block(threads_x, 1, 1);
+        dim3 grid((num_quats + threads_x - 1) / threads_x);
+
+        cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+        quaternion_apply_kernel<<<grid, block, 0, stream>>>(
+            numel,
+            quat_ptr,
+            point_ptr,
+            result_ptr);
+        return result;
+    }
+
+    /*
+    =============================================
+    Torch Library
+    =============================================
+    */
+
     TORCH_LIBRARY(twobyfour, m)
     {
         m.def("quaternion_multiply(Tensor left, Tensor right) -> Tensor");
+        m.def("quaternion_apply(Tensor quat, Tensor point) -> Tensor");
     }
 
     TORCH_LIBRARY_IMPL(twobyfour, CUDA, m)
     {
         m.impl("quaternion_multiply", &quaternion_multiply_cuda);
+        m.impl("quaternion_apply", &quaternion_apply_cuda);
     }
 }
