@@ -16,27 +16,10 @@
 #define I 1
 #define J 2
 #define K 3
-#define MUL_INDICES { \
-    {R, I, J, K},     \
-    {I, R, K, J},     \
-    {J, K, R, I},     \
-    {K, J, I, R},     \
-}
-#define MUL_SIGNS {  \
-    {1, -1, -1, -1}, \
-    {1, 1, 1, -1},   \
-    {1, -1, 1, 1},   \
-    {1, 1, -1, 1},   \
-}
 
 #define X 0
 #define Y 1
 #define Z 2
-#define CROSS_PRODUCT(ptr1, ptr2) {            \
-    (ptr1[Y] * ptr2[Z]) - (ptr1[Z] * ptr2[Y]), \
-    (ptr1[Z] * ptr2[X]) - (ptr1[X] * ptr2[Z]), \
-    (ptr1[X] * ptr2[Y]) - (ptr1[Y] * ptr2[X]), \
-}
 
 namespace twobyfour
 {
@@ -46,8 +29,18 @@ namespace twobyfour
     =============================================
     */
 
-    static __constant__ uint8_t INDEX[4][4] = MUL_INDICES;
-    static __constant__ int8_t SIGN[4][4] = MUL_SIGNS;
+    static __constant__ uint8_t INDEX[4][4] = {
+        {R, I, J, K},
+        {I, R, K, J},
+        {J, K, R, I},
+        {K, J, I, R},
+    };
+    static __constant__ int8_t SIGN[4][4] = {
+        {1, -1, -1, -1},
+        {1, 1, 1, -1},
+        {1, -1, 1, 1},
+        {1, 1, -1, 1},
+    };
 
     __global__ void quaternion_multiply_kernel(
         size_t numel,
@@ -60,11 +53,14 @@ namespace twobyfour
         if (qx + idz >= numel)
             return;
 
+        const float *leftid = &left[qx];
+        const float *rightid = &right[qx];
+
         result[qx + idz] =
-            (left[qx + R] * right[qx + INDEX[idz][R]] * SIGN[idz][R]) +
-            (left[qx + I] * right[qx + INDEX[idz][I]] * SIGN[idz][I]) +
-            (left[qx + J] * right[qx + INDEX[idz][J]] * SIGN[idz][J]) +
-            (left[qx + K] * right[qx + INDEX[idz][K]] * SIGN[idz][K]);
+            (leftid[R] * rightid[INDEX[idz][R]] * SIGN[idz][R]) +
+            (leftid[I] * rightid[INDEX[idz][I]] * SIGN[idz][I]) +
+            (leftid[J] * rightid[INDEX[idz][J]] * SIGN[idz][J]) +
+            (leftid[K] * rightid[INDEX[idz][K]] * SIGN[idz][K]);
     }
 
     at::Tensor quaternion_multiply_cuda(
@@ -122,13 +118,16 @@ namespace twobyfour
 
         const float *quat_v = &quat[qx + 1];
         const float *point_v = &point[qx + 1];
-        const float cross_prod[3] = CROSS_PRODUCT(quat_v, point_v);
-        const float cross_cross_prod[3] = CROSS_PRODUCT(quat_v, cross_prod);
+        const float cross_prod[3] = {
+            (quat_v[Y] * point_v[Z]) - (quat_v[Z] * point_v[Y]),
+            (quat_v[Z] * point_v[X]) - (quat_v[X] * point_v[Z]),
+            (quat_v[X] * point_v[Y]) - (quat_v[Y] * point_v[X]),
+        };
 
         result[qx + R] = point[qx + R];
-        result[qx + I] = point_v[X] + (2 * quat[qx + R] * cross_prod[X]) + (2 * cross_cross_prod[X]);
-        result[qx + J] = point_v[Y] + (2 * quat[qx + R] * cross_prod[Y]) + (2 * cross_cross_prod[Y]);
-        result[qx + K] = point_v[Z] + (2 * quat[qx + R] * cross_prod[Z]) + (2 * cross_cross_prod[Z]);
+        result[qx + I] = point_v[X] + (2 * quat[qx + R] * cross_prod[X]) + (2 * ((quat_v[Y] * cross_prod[Z]) - (quat_v[Z] * cross_prod[Y])));
+        result[qx + J] = point_v[Y] + (2 * quat[qx + R] * cross_prod[Y]) + (2 * ((quat_v[Z] * cross_prod[X]) - (quat_v[X] * cross_prod[Z])));
+        result[qx + K] = point_v[Z] + (2 * quat[qx + R] * cross_prod[Z]) + (2 * ((quat_v[X] * cross_prod[Y]) - (quat_v[Y] * cross_prod[X])));
     }
 
     at::Tensor quaternion_apply_cuda(
