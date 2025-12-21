@@ -1,6 +1,7 @@
 **/__pycache__/
 build/
 .venv/
+.vscode/
 
 *.pyd
 copilot-instructions.md
