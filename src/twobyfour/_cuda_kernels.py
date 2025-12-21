@@ -32,15 +32,16 @@ def _(left: Tensor, right: Tensor) -> Tensor:
     return torch.empty_like(left)
 
 
-_quaternion_multiply = cast(Callable[[Tensor, Tensor], Tensor],
-                            torch.ops.twobyfour.quaternion_multiply)
+def _quaternion_multiply(left: Tensor, right: Tensor) -> Tensor:
+    left = left.contiguous()
+    right = right.contiguous()
+    _q_m = cast(Callable[[Tensor, Tensor], Tensor],
+                torch.ops.twobyfour.quaternion_multiply)
+    return _q_m(left, right)
 
 
 def _quat_mul_backward(ctx, grad: Tensor):
-    grad = grad.contiguous()
     leftconj, rightconj = cast(tupleTensor2, ctx.saved_tensors)
-    leftconj[..., 1:] *= -1
-    rightconj[..., 1:] *= -1
 
     grad_left, grad_right = None, None
     if ctx.needs_input_grad[0]:
@@ -53,12 +54,14 @@ def _quat_mul_backward(ctx, grad: Tensor):
 def _quat_mul_setup_context(ctx, inputs: tupleTensor2, output):
     left, right = inputs
 
-    saved_left, saved_right = None, None
+    saved_leftconj, saved_rightconj = None, None
     if ctx.needs_input_grad[0]:
-        saved_left = left.contiguous()
+        saved_leftconj = left.clone()
+        saved_leftconj[..., 1:] *= -1
     if ctx.needs_input_grad[1]:
-        saved_right = right.contiguous()
-    ctx.save_for_backward(saved_left, saved_right)
+        saved_rightconj = right.clone()
+        saved_rightconj[..., 1:] *= -1
+    ctx.save_for_backward(saved_leftconj, saved_rightconj)
 
 
 torch.library.register_autograd(
@@ -69,7 +72,7 @@ def quat_mul(left: Quaternion, right: Quaternion) -> Quaternion:
     leftbc, rightbc = cast(tupleTensor2,
                            torch.broadcast_tensors(left, right))
 
-    output = _quaternion_multiply(leftbc.contiguous(), rightbc.contiguous())
+    output = _quaternion_multiply(leftbc, rightbc)
     return Quaternion(output)
 
 
@@ -90,12 +93,15 @@ def _(quat: Tensor, point: Tensor):
     return torch.empty_like(point)
 
 
-_quaternion_apply = cast(Callable[[Tensor, Tensor], Tensor],
-                         torch.ops.twobyfour.quaternion_apply)
+def _quaternion_apply(quat: Tensor, point: Tensor) -> Tensor:
+    quat = quat.contiguous()
+    point = point.contiguous()
+    _q_a = cast(Callable[[Tensor, Tensor], Tensor],
+                torch.ops.twobyfour.quaternion_apply)
+    return _q_a(quat, point)
 
 
 def _quat_apply_backward(ctx, grad: Tensor):
-    grad = grad.contiguous()
     quat, point = cast(tupleTensor2, ctx.saved_tensors)
     quat_conj = quat.clone()
     quat_conj[..., 1:] *= -1
@@ -109,14 +115,14 @@ def _quat_apply_backward(ctx, grad: Tensor):
     return grad_quat, grad_point
 
 
-def _quat_apply_setup_context(ctx, inputs: tupleTensor2, output):
+def _quat_apply_setup_context(ctx, inputs: tupleTensor2):
     quat, point = inputs
 
     saved_quat, saved_point = None, None
     if ctx.needs_input_grad[0]:
-        saved_quat = quat.contiguous()
+        saved_quat = quat
     if ctx.needs_input_grad[1]:
-        saved_point = point.contiguous()
+        saved_point = point
     ctx.save_for_backward(saved_quat, saved_point)
 
 
@@ -128,5 +134,5 @@ def quat_apply(quat: Quaternion, point: Quaternion) -> Quaternion:
     quatbc, pointbc = cast(tupleTensor2,
                            torch.broadcast_tensors(quat, point))
 
-    output = _quaternion_apply(quatbc.contiguous(), pointbc.contiguous())
+    output = _quaternion_apply(quatbc, pointbc)
     return Quaternion(output)

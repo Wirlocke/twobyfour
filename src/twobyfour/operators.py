@@ -68,6 +68,7 @@ def invq(q: Quaternion) -> Quaternion:
 # Multi Input Quaternion Operations
 # =============================================
 
+
 def quaternion_dot_product(a: Quaternion, b: Quaternion) -> Tensor:
     return (a * b).sum(-1, keepdim=True)
 
