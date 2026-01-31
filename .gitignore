@@ -2,6 +2,7 @@
 build/
 .venv/
 .vscode/
+tests/
 
 *.pyd
 copilot-instructions.md
