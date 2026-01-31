@@ -11,6 +11,7 @@ from torch import Tensor
 
 from . import _C  # type: ignore
 from .typing import Quaternion
+from . import _native_functions as native
 
 tupleTensor2 = tuple[Tensor, Tensor]
 
@@ -26,8 +27,8 @@ QUATERNION_MULTIPLY = "twobyfour::quaternion_multiply"
 @torch.library.register_fake(QUATERNION_MULTIPLY)
 def _(left: Tensor, right: Tensor) -> Tensor:
     torch._check(left.shape == right.shape)
-    torch._check(left.dtype == torch.float)
-    torch._check(left.dtype == torch.float)
+    torch._check(left.is_floating_point())
+    torch._check(right.is_floating_point())
     torch._check(left.device == right.device)
     return torch.empty_like(left)
 
@@ -56,11 +57,10 @@ def _quat_mul_setup_context(ctx, inputs: tupleTensor2, output):
 
     saved_leftconj, saved_rightconj = None, None
     if ctx.needs_input_grad[0]:
-        saved_leftconj = left.clone()
-        saved_leftconj[..., 1:] *= -1
+        saved_rightconj = native._quaternion_conjugate(right)
     if ctx.needs_input_grad[1]:
-        saved_rightconj = right.clone()
-        saved_rightconj[..., 1:] *= -1
+        saved_leftconj = native._quaternion_conjugate(left)
+
     ctx.save_for_backward(saved_leftconj, saved_rightconj)
 
 
@@ -87,8 +87,8 @@ QUATERNION_APPLY = "twobyfour::quaternion_apply"
 @torch.library.register_fake(QUATERNION_APPLY)
 def _(quat: Tensor, point: Tensor):
     torch._check(quat.shape == point.shape)
-    torch._check(quat.dtype == torch.float)
-    torch._check(point.dtype == torch.float)
+    torch._check(quat.is_floating_point())
+    torch._check(point.is_floating_point())
     torch._check(quat.device == point.device)
     return torch.empty_like(point)
 
@@ -103,26 +103,26 @@ def _quaternion_apply(quat: Tensor, point: Tensor) -> Tensor:
 
 def _quat_apply_backward(ctx, grad: Tensor):
     quat, point = cast(tupleTensor2, ctx.saved_tensors)
-    quat_conj = quat.clone()
-    quat_conj[..., 1:] *= -1
+    quatconj = native._quaternion_conjugate(quat)
+    pointconj = native._quaternion_conjugate(point)
 
     grad_quat, grad_point = None, None
     if ctx.needs_input_grad[0]:
-        grad_quat = 2 * (_quaternion_multiply(grad, _quaternion_multiply(point, quat_conj)) +
-                         _quaternion_multiply(quat_conj, _quaternion_multiply(grad, point)))
+        grad_quat = (_quaternion_multiply(_quaternion_multiply(grad, quat), pointconj) +
+                     native._quaternion_conjugate(_quaternion_multiply(_quaternion_multiply(pointconj, quatconj), grad)))
     if ctx.needs_input_grad[1]:
-        grad_point = _quaternion_apply(quat, grad)
+        grad_point = _quaternion_apply(quatconj, grad)
     return grad_quat, grad_point
 
 
-def _quat_apply_setup_context(ctx, inputs: tupleTensor2):
+def _quat_apply_setup_context(ctx, inputs: tupleTensor2, output):
     quat, point = inputs
 
     saved_quat, saved_point = None, None
-    if ctx.needs_input_grad[0]:
+    if ctx.needs_input_grad[0] or ctx.needs_input_grad[1]:
         saved_quat = quat
-    if ctx.needs_input_grad[1]:
         saved_point = point
+
     ctx.save_for_backward(saved_quat, saved_point)
 
 

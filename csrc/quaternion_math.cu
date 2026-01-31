@@ -6,9 +6,9 @@
 #include <cuda_runtime.h>
 #include <ATen/cuda/CUDAContext.h>
 
-#define VALID(tens)                          \
-    TORCH_CHECK(tens.is_contiguous());       \
-    TORCH_CHECK(tens.dtype() == at::kFloat); \
+#define VALID(tens)                        \
+    TORCH_CHECK(tens.is_contiguous());     \
+    TORCH_CHECK(tens.is_floating_point()); \
     TORCH_INTERNAL_ASSERT(tens.device().type() == at::DeviceType::CUDA);
 
 #define QUAT_STRIDE 4
@@ -84,7 +84,7 @@ namespace twobyfour
             return result;
         }
         const size_t num_quats = numel / QUAT_STRIDE;
-
+        
         const int threads = 256;
         const int threads_x = threads / QUAT_STRIDE;
         dim3 block(threads_x, 1, QUAT_STRIDE);

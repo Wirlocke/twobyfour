@@ -10,6 +10,7 @@ import torch
 from torch import Tensor
 
 from .typing import Quaternion
+from . import _native_functions as native
 from . import _cuda_kernels as cuda
 
 
@@ -23,7 +24,7 @@ QuaternionTranslation = Tuple[Quaternion, Quaternion]
 
 
 def quaternion_squares(q: Quaternion) -> Tensor:
-    return q.square().sum(-1, keepdim=True)
+    return native._quaternion_squares(q)
 
 
 def sqsumq(q: Quaternion) -> Tensor:
@@ -31,7 +32,7 @@ def sqsumq(q: Quaternion) -> Tensor:
 
 
 def quaternion_magnitude(q: Quaternion) -> Tensor:
-    return q.norm(dim=-1, keepdim=True)
+    return native._quaternion_magnitude(q)
 
 
 def magq(q: Quaternion) -> Tensor:
@@ -39,7 +40,7 @@ def magq(q: Quaternion) -> Tensor:
 
 
 def quaternion_normalize(q: Quaternion) -> Quaternion:
-    return q / quaternion_magnitude(q)
+    return Quaternion(native._quaternion_normalize(q))
 
 
 def normq(q: Quaternion) -> Quaternion:
@@ -47,9 +48,7 @@ def normq(q: Quaternion) -> Quaternion:
 
 
 def quaternion_conjugate(q: Quaternion) -> Quaternion:
-    result = q.clone()
-    result[..., 1:] *= -1
-    return result
+    return Quaternion(native._quaternion_conjugate(q))
 
 
 def conjq(q: Quaternion) -> Quaternion:
@@ -57,7 +56,7 @@ def conjq(q: Quaternion) -> Quaternion:
 
 
 def quaternion_inverse(q: Quaternion) -> Quaternion:
-    return quaternion_conjugate(q) / quaternion_squares(q)
+    return Quaternion(native._quaternion_inverse(q))
 
 
 def invq(q: Quaternion) -> Quaternion:
@@ -70,7 +69,7 @@ def invq(q: Quaternion) -> Quaternion:
 
 
 def quaternion_dot_product(a: Quaternion, b: Quaternion) -> Tensor:
-    return (a * b).sum(-1, keepdim=True)
+    return native._quaternion_dot_product(a, b)
 
 
 def dotq(a: Quaternion, b: Quaternion) -> Tensor:
@@ -81,15 +80,7 @@ def quaternion_multiply(left: Quaternion, right: Quaternion) -> Quaternion:
     if left.is_cuda:
         return cuda.quat_mul(left, right)
     else:
-        la, lb, lc, ld = left.unbind(-1)
-        ra, rb, rc, rd = right.unbind(-1)
-        result = torch.stack((
-            la * ra - lb * rb - lc * rc - ld * rd,
-            la * rb + lb * ra + lc * rd - ld * rc,
-            la * rc - lb * rd + lc * ra + ld * rb,
-            la * rd + lb * rc - lc * rb + ld * ra
-        ), dim=-1)
-        return Quaternion(result)
+        return Quaternion(native._quaternion_multiply(left, right))
 
 
 def mulq(left: Quaternion, right: Quaternion) -> Quaternion:
@@ -100,10 +91,7 @@ def quaternion_apply(quaternion: Quaternion, point: Quaternion) -> Quaternion:
     if quaternion.is_cuda:
         return cuda.quat_apply(quaternion, point)
     else:
-        return quaternion_multiply(
-            quaternion_multiply(quaternion, point),
-            quaternion_conjugate(quaternion)
-        )
+        return Quaternion(native._quaternion_apply(quaternion, point))
 
 
 def applyq(quaternion: Quaternion, point: Quaternion) -> Quaternion:
