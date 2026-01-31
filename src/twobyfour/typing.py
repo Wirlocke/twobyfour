@@ -39,22 +39,22 @@ class Quaternion(torch.Tensor):
 
         ret = super().__torch_function__(func, types, args, kwargs)
 
-        if isinstance(ret, list):
-            return [
-                r.as_subclass(Tensor) if isinstance(r, cls)
-                and invalid(r) else r
-                for r in ret
-            ]
+        if isinstance(ret, cls) and invalid(ret):
+            ret = ret.as_subclass(Tensor)
 
-        if isinstance(ret, tuple):
+        elif isinstance(ret, tuple):
             return tuple(
-                r.as_subclass(Tensor) if isinstance(r, cls)
-                and invalid(r) else r
+                r.as_subclass(Tensor) if
+                isinstance(r, cls) and invalid(r) else r
                 for r in ret
             )
 
-        elif isinstance(ret, cls) and invalid(ret):
-            ret = ret.as_subclass(Tensor)
+        elif isinstance(ret, list):
+            return [
+                r.as_subclass(Tensor) if
+                isinstance(r, cls) and invalid(r) else r
+                for r in ret
+            ]
 
         return ret
 
