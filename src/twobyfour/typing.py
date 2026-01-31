@@ -16,7 +16,7 @@ class Quaternion(torch.Tensor):
         if not isinstance(data, Tensor):
             data = torch.tensor(data, *args, **kwargs)
 
-        if not torch.is_floating_point(data):
+        if not (data.is_floating_point() or data.is_complex()):
             data = data.to(torch.get_default_dtype())
 
         if data.ndim == 1:

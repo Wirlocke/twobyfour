@@ -27,8 +27,9 @@ QUATERNION_MULTIPLY = "twobyfour::quaternion_multiply"
 @torch.library.register_fake(QUATERNION_MULTIPLY)
 def _(left: Tensor, right: Tensor) -> Tensor:
     torch._check(left.shape == right.shape)
-    torch._check(left.is_floating_point())
-    torch._check(right.is_floating_point())
+    torch._check(left.is_floating_point() or left.is_complex())
+    torch._check(right.is_floating_point() or right.is_complex())
+    torch._check(left.dtype == right.dtype)
     torch._check(left.device == right.device)
     return torch.empty_like(left)
 
@@ -87,8 +88,9 @@ QUATERNION_APPLY = "twobyfour::quaternion_apply"
 @torch.library.register_fake(QUATERNION_APPLY)
 def _(quat: Tensor, point: Tensor):
     torch._check(quat.shape == point.shape)
-    torch._check(quat.is_floating_point())
-    torch._check(point.is_floating_point())
+    torch._check(quat.is_floating_point() or quat.is_complex())
+    torch._check(point.is_floating_point() or point.is_complex())
+    torch._check(quat.dtype == point.dtype)
     torch._check(quat.device == point.device)
     return torch.empty_like(point)
 
