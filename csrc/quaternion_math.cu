@@ -7,9 +7,11 @@
 #include <ATen/cuda/CUDAContext.h>
 
 #define VALID(TENSOR)                                               \
+    TORCH_INTERNAL_ASSERT(TENSOR.is_cuda());                        \
     TORCH_CHECK(TENSOR.is_contiguous());                            \
     TORCH_CHECK(TENSOR.is_floating_point() || TENSOR.is_complex()); \
-    TORCH_INTERNAL_ASSERT(TENSOR.is_cuda());
+    TORCH_CHECK(TENSOR.numel() != 0)                                \
+    TORCH_CHECK(TENSOR.numel() % 4 == 0, "Input length must be divisible by 4.");
 
 #define DISPATCH_DTYPE(TENSOR, KERNEL, ...)      \
     AT_DISPATCH_FLOATING_AND_COMPLEX_TYPES_AND2( \
@@ -93,16 +95,10 @@ namespace twobyfour
         VALID(tens_right);
 
         at::Tensor result = at::empty_like(tens_left);
-
         const size_t numel = result.numel();
-        TORCH_CHECK(numel % 4 == 0, "Input length must be divisible by 4.");
-        if (numel == 0)
-        {
-            return result;
-        }
         auto [grid, block] = quat_threads(numel);
-
         cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+
         DISPATCH_DTYPE(
             result,
             quaternion_multiply_kernel,
@@ -155,16 +151,10 @@ namespace twobyfour
         VALID(tens_point)
 
         at::Tensor result = at::empty_like(tens_point);
-
         const size_t numel = result.numel();
-        TORCH_CHECK(numel % 4 == 0, "Input length must be divisible by 4.");
-        if (numel == 0)
-        {
-            return result;
-        }
         auto [grid, block] = quat_threads(numel, 1);
-
         cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+
         DISPATCH_DTYPE(
             result,
             quaternion_apply_kernel,
