@@ -19,6 +19,7 @@
         #KERNEL,                                 \
         [&]() { KERNEL<scalar_t> __VA_ARGS__; })
 
+#define THREADS 256
 #define QUAT_STRIDE 4
 #define R 0
 #define I 1
@@ -31,6 +32,17 @@
 
 namespace twobyfour
 {
+    cuda::std::pair<dim3, dim3> quat_threads(
+        const size_t numel,
+        const int threads_z = QUAT_STRIDE)
+    {
+        const size_t num_quats = numel / QUAT_STRIDE;
+        const int threads_x = THREADS / QUAT_STRIDE;
+        dim3 grid((num_quats + threads_x - 1) / threads_x);
+        dim3 block(threads_x, 1, threads_z);
+        return cuda::std::make_pair(grid, block);
+    }
+
     /*
     =============================================
     Quaternion Multiply
@@ -52,7 +64,7 @@ namespace twobyfour
 
     template <typename scalar_t>
     __global__ void quaternion_multiply_kernel(
-        size_t numel,
+        const size_t numel,
         const scalar_t *left,
         const scalar_t *right,
         scalar_t *__restrict__ result)
@@ -88,12 +100,7 @@ namespace twobyfour
         {
             return result;
         }
-        const size_t num_quats = numel / QUAT_STRIDE;
-
-        const int threads = 256;
-        const int threads_x = threads / QUAT_STRIDE;
-        dim3 block(threads_x, 1, QUAT_STRIDE);
-        dim3 grid((num_quats + threads_x - 1) / threads_x);
+        auto [grid, block] = quat_threads(numel);
 
         cudaStream_t stream = at::cuda::getCurrentCUDAStream();
         DISPATCH_DTYPE(
@@ -116,7 +123,7 @@ namespace twobyfour
 
     template <typename scalar_t>
     __global__ void quaternion_apply_kernel(
-        size_t numel,
+        const size_t numel,
         const scalar_t *quat,
         const scalar_t *point,
         scalar_t *__restrict__ result)
@@ -155,12 +162,7 @@ namespace twobyfour
         {
             return result;
         }
-        const size_t num_quats = numel / QUAT_STRIDE;
-
-        const int threads = 256;
-        const int threads_x = threads / QUAT_STRIDE;
-        dim3 block(threads_x, 1, 1);
-        dim3 grid((num_quats + threads_x - 1) / threads_x);
+        auto [grid, block] = quat_threads(numel, 1);
 
         cudaStream_t stream = at::cuda::getCurrentCUDAStream();
         DISPATCH_DTYPE(

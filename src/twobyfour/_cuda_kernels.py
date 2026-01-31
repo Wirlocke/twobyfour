@@ -16,6 +16,16 @@ from . import _native_functions as native
 tupleTensor2 = tuple[Tensor, Tensor]
 
 
+def _validate(*tensors: Tensor):
+    ref = tensors[0]
+    torch._check(ref.is_cuda)
+    torch._check(ref.is_floating_point() or ref.is_complex())
+    for tens in tensors[1:]:
+        torch._check(tens.device == ref.device)
+        torch._check(tens.dtype == ref.dtype)
+        torch._check(tens.shape == ref.shape)
+
+
 # =============================================
 # Quaternion Multiply
 # =============================================
@@ -26,11 +36,7 @@ QUATERNION_MULTIPLY = "twobyfour::quaternion_multiply"
 
 @torch.library.register_fake(QUATERNION_MULTIPLY)
 def _(left: Tensor, right: Tensor) -> Tensor:
-    torch._check(left.shape == right.shape)
-    torch._check(left.is_floating_point() or left.is_complex())
-    torch._check(right.is_floating_point() or right.is_complex())
-    torch._check(left.dtype == right.dtype)
-    torch._check(left.device == right.device)
+    _validate(left, right)
     return torch.empty_like(left)
 
 
@@ -87,11 +93,7 @@ QUATERNION_APPLY = "twobyfour::quaternion_apply"
 
 @torch.library.register_fake(QUATERNION_APPLY)
 def _(quat: Tensor, point: Tensor):
-    torch._check(quat.shape == point.shape)
-    torch._check(quat.is_floating_point() or quat.is_complex())
-    torch._check(point.is_floating_point() or point.is_complex())
-    torch._check(quat.dtype == point.dtype)
-    torch._check(quat.device == point.device)
+    _validate(quat, point)
     return torch.empty_like(point)
 
 
