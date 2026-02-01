@@ -108,12 +108,11 @@ def _quaternion_unit_apply(quat: Tensor, point: Tensor) -> Tensor:
 def _quat_unit_apply_backward(ctx, grad: Tensor):
     quat, point = cast(tupleTensor2, ctx.saved_tensors)
     quatconj = native._quaternion_conjugate(quat)
-    pointconj = native._quaternion_conjugate(point)
 
     grad_quat, grad_point = None, None
     if ctx.needs_input_grad[0]:
-        grad_quat = (_quaternion_multiply(_quaternion_multiply(grad, quat), pointconj) +
-                     native._quaternion_conjugate(_quaternion_multiply(_quaternion_multiply(pointconj, quatconj), grad)))
+        grad_quat = 2 * _quaternion_multiply(
+            _quaternion_multiply(grad, native._quaternion_conjugate(point)), quatconj)
     if ctx.needs_input_grad[1]:
         grad_point = _quaternion_unit_apply(quatconj, grad)
     return grad_quat, grad_point
