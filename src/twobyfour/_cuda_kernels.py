@@ -88,24 +88,24 @@ def quat_mul(left: Quaternion, right: Quaternion) -> Quaternion:
 # =============================================
 
 
-QUATERNION_APPLY = "twobyfour::quaternion_apply"
+QUATERNION_UNIT_APPLY = "twobyfour::quaternion_unit_apply"
 
 
-@torch.library.register_fake(QUATERNION_APPLY)
+@torch.library.register_fake(QUATERNION_UNIT_APPLY)
 def _(quat: Tensor, point: Tensor):
     _validate(quat, point)
     return torch.empty_like(point)
 
 
-def _quaternion_apply(quat: Tensor, point: Tensor) -> Tensor:
+def _quaternion_unit_apply(quat: Tensor, point: Tensor) -> Tensor:
     quat = quat.contiguous()
     point = point.contiguous()
     _q_a = cast(Callable[[Tensor, Tensor], Tensor],
-                torch.ops.twobyfour.quaternion_apply)
+                torch.ops.twobyfour.quaternion_unit_apply)
     return _q_a(quat, point)
 
 
-def _quat_apply_backward(ctx, grad: Tensor):
+def _quat_unit_apply_backward(ctx, grad: Tensor):
     quat, point = cast(tupleTensor2, ctx.saved_tensors)
     quatconj = native._quaternion_conjugate(quat)
     pointconj = native._quaternion_conjugate(point)
@@ -115,11 +115,11 @@ def _quat_apply_backward(ctx, grad: Tensor):
         grad_quat = (_quaternion_multiply(_quaternion_multiply(grad, quat), pointconj) +
                      native._quaternion_conjugate(_quaternion_multiply(_quaternion_multiply(pointconj, quatconj), grad)))
     if ctx.needs_input_grad[1]:
-        grad_point = _quaternion_apply(quatconj, grad)
+        grad_point = _quaternion_unit_apply(quatconj, grad)
     return grad_quat, grad_point
 
 
-def _quat_apply_setup_context(ctx, inputs: tupleTensor2, output):
+def _quat_unit_apply_setup_context(ctx, inputs: tupleTensor2, output):
     quat, point = inputs
 
     saved_quat, saved_point = None, None
@@ -131,12 +131,12 @@ def _quat_apply_setup_context(ctx, inputs: tupleTensor2, output):
 
 
 torch.library.register_autograd(
-    QUATERNION_APPLY, _quat_apply_backward, setup_context=_quat_apply_setup_context)
+    QUATERNION_UNIT_APPLY, _quat_unit_apply_backward, setup_context=_quat_unit_apply_setup_context)
 
 
-def quat_apply(quat: Quaternion, point: Quaternion) -> Quaternion:
+def quat_unit_apply(quat: Quaternion, point: Quaternion) -> Quaternion:
     quatbc, pointbc = cast(tupleTensor2,
                            torch.broadcast_tensors(quat, point))
 
-    output = _quaternion_apply(quatbc, pointbc)
+    output = _quaternion_unit_apply(quatbc, pointbc)
     return Quaternion(output)

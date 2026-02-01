@@ -38,6 +38,10 @@ def _quaternion_dot_product(a: Tensor, b: Tensor) -> Tensor:
     return (a * b).sum(-1, keepdim=True)
 
 
+def _quaternion_cross_product(a: Tensor, b: Tensor) -> Tensor:
+    return torch.cross(a, b, dim=-1)
+
+
 def _quaternion_multiply(left: Tensor, right: Tensor) -> Tensor:
     la, lb, lc, ld = left.unbind(-1)
     ra, rb, rc, rd = right.unbind(-1)
@@ -50,8 +54,14 @@ def _quaternion_multiply(left: Tensor, right: Tensor) -> Tensor:
     return result
 
 
-def _quaternion_apply(quaternion: Tensor, point: Tensor) -> Tensor:
-    return _quaternion_multiply(
-        _quaternion_multiply(quaternion, point),
-        _quaternion_conjugate(quaternion)
-    )
+def _quaternion_unit_apply(quaternion: Tensor, point: Tensor) -> Tensor:
+    quat_w = quaternion[..., 0:1]
+    quat_v = quaternion[..., 1:]
+    point_v = point[..., 1:]
+
+    cross_prod = _quaternion_cross_product(quat_v, point_v)
+    double_cross = _quaternion_cross_product(quat_v, cross_prod)
+
+    result_v = point_v + (2 * quat_w * cross_prod) + (2 * double_cross)
+
+    return torch.cat([point[..., 0:1], result_v], dim=-1)

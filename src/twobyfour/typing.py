@@ -138,6 +138,6 @@ class Quaternion(torch.Tensor):
         from . import operators as ops
         return ops.quaternion_multiply(other, self)
 
-    def applyq(self, point) -> "Quaternion":
+    def applyuq(self, point) -> "Quaternion":
         from . import operators as ops
-        return ops.quaternion_apply(self, point)
+        return ops.quaternion_unit_apply(self, point)

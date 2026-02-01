@@ -87,15 +87,15 @@ def mulq(left: Quaternion, right: Quaternion) -> Quaternion:
     return quaternion_multiply(left, right)
 
 
-def quaternion_apply(quaternion: Quaternion, point: Quaternion) -> Quaternion:
+def quaternion_unit_apply(quaternion: Quaternion, point: Quaternion) -> Quaternion:
     if quaternion.is_cuda:
-        return cuda.quat_apply(quaternion, point)
+        return cuda.quat_unit_apply(quaternion, point)
     else:
-        return Quaternion(native._quaternion_apply(quaternion, point))
+        return Quaternion(native._quaternion_unit_apply(quaternion, point))
 
 
-def applyq(quaternion: Quaternion, point: Quaternion) -> Quaternion:
-    return quaternion_apply(quaternion, point)
+def applyuq(quaternion: Quaternion, point: Quaternion) -> Quaternion:
+    return quaternion_unit_apply(quaternion, point)
 
 
 # =============================================
@@ -104,19 +104,19 @@ def applyq(quaternion: Quaternion, point: Quaternion) -> Quaternion:
 
 
 def quaternion_translation_apply(q: Quaternion, t: Quaternion, point: Quaternion) -> Quaternion:
-    p = quaternion_apply(q, point)
+    p = quaternion_unit_apply(q, point)
     return p + t
 
 
 def quaternion_translation_compose(qt1: QuaternionTranslation, qt2: QuaternionTranslation) -> QuaternionTranslation:
     qr = quaternion_multiply(qt1[0], qt2[0])
-    t = quaternion_apply(qt1[0], qt2[1]) + qt1[1]
+    t = quaternion_unit_apply(qt1[0], qt2[1]) + qt1[1]
     return (qr, t)
 
 
 def quaternion_translation_inverse(q: Quaternion, t: Quaternion) -> QuaternionTranslation:
     q_inv = quaternion_conjugate(q)
-    t_inv = quaternion_apply(q_inv, -t)
+    t_inv = quaternion_unit_apply(q_inv, -t)
     return q_inv, t_inv
 
 # =============================================

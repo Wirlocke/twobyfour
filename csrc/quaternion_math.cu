@@ -21,6 +21,8 @@
         #KERNEL,                                 \
         [&]() { KERNEL<scalar_t> __VA_ARGS__; })
 
+#define IMPLEMENT(M, FUNCTION) M.impl(#FUNCTION, &FUNCTION)
+
 #define THREADS 256
 #define QUAT_STRIDE 4
 #define R 0
@@ -86,7 +88,7 @@ namespace twobyfour
             (leftid[K] * rightid[INDEX[idz][K]] * SIGN[idz][K]);
     }
 
-    at::Tensor quaternion_multiply_cuda(
+    at::Tensor quaternion_multiply(
         const at::Tensor &tens_left,
         const at::Tensor &tens_right)
     {
@@ -118,7 +120,7 @@ namespace twobyfour
     */
 
     template <typename scalar_t>
-    __global__ void quaternion_apply_kernel(
+    __global__ void quaternion_unit_apply_kernel(
         const size_t numel,
         const scalar_t *quat,
         const scalar_t *point,
@@ -142,7 +144,7 @@ namespace twobyfour
         result[qx + K] = point_v[Z] + (2 * quat[qx + R] * cross_prod[Z]) + (2 * ((quat_v[X] * cross_prod[Y]) - (quat_v[Y] * cross_prod[X])));
     }
 
-    at::Tensor quaternion_apply_cuda(
+    at::Tensor quaternion_unit_apply(
         const at::Tensor &tens_quat,
         const at::Tensor &tens_point)
     {
@@ -157,7 +159,7 @@ namespace twobyfour
 
         DISPATCH_DTYPE(
             result,
-            quaternion_apply_kernel,
+            quaternion_unit_apply_kernel,
             <<<grid, block, 0, stream>>>(
                 numel,
                 tens_quat.data_ptr<scalar_t>(),
@@ -176,12 +178,12 @@ namespace twobyfour
     TORCH_LIBRARY(twobyfour, m)
     {
         m.def("quaternion_multiply(Tensor left, Tensor right) -> Tensor");
-        m.def("quaternion_apply(Tensor quat, Tensor point) -> Tensor");
+        m.def("quaternion_unit_apply(Tensor quat, Tensor point) -> Tensor");
     }
 
     TORCH_LIBRARY_IMPL(twobyfour, CUDA, m)
     {
-        m.impl("quaternion_multiply", &quaternion_multiply_cuda);
-        m.impl("quaternion_apply", &quaternion_apply_cuda);
+        IMPLEMENT(m, quaternion_multiply);
+        IMPLEMENT(m, quaternion_unit_apply);
     }
 }
