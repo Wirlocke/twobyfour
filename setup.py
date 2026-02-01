@@ -1,5 +1,6 @@
 import os
 import glob
+import sys
 from setuptools import setup
 
 import torch
@@ -28,20 +29,44 @@ def get_extensions():
     extension = CUDAExtension if use_cuda else CppExtension
 
     extra_link_args = []
-    extra_compile_args = {
-        "cxx": [
+    is_windows = sys.platform == "win32"
+
+    if is_windows:
+        # MSVC compiler flags for Windows
+        cxx_flags = [
+            "/std:c++20",
+            "/O2" if not debug_mode else "/Od",
+            "/DPy_LIMITED_API=0x03090000",  # min CPython version 3.9
+        ]
+        nvcc_flags = [
+            "-std=c++20",
+            "-O2" if not debug_mode else "-O0",
+        ]
+        if debug_mode:
+            cxx_flags.append("/Zi")
+            nvcc_flags.append("-g")
+            extra_link_args.extend(["/DEBUG"])
+    else:
+        # GCC/Clang compiler flags for Unix-like systems
+        cxx_flags = [
+            "-std=c++20",
             "-O3" if not debug_mode else "-O0",
             "-fdiagnostics-color=always",
             "-DPy_LIMITED_API=0x03090000",  # min CPython version 3.9
-        ],
-        "nvcc": [
+        ]
+        nvcc_flags = [
+            "-std=c++20",
             "-O3" if not debug_mode else "-O0",
-        ],
+        ]
+        if debug_mode:
+            cxx_flags.append("-g")
+            nvcc_flags.append("-g")
+            extra_link_args.extend(["-O0", "-g"])
+
+    extra_compile_args = {
+        "cxx": cxx_flags,
+        "nvcc": nvcc_flags,
     }
-    if debug_mode:
-        extra_compile_args["cxx"].append("-g")
-        extra_compile_args["nvcc"].append("-g")
-        extra_link_args.extend(["-O0", "-g"])
 
     this_dir = os.path.dirname(os.path.curdir)
     extensions_dir = os.path.join(this_dir, "csrc")
