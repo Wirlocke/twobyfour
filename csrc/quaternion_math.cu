@@ -6,7 +6,7 @@
 #include <cuda_runtime.h>
 #include <ATen/cuda/CUDAContext.h>
 
-#define VALID(TENSOR)                                               \
+#define VALIDATE(TENSOR)                                            \
     TORCH_INTERNAL_ASSERT(TENSOR.is_cuda());                        \
     TORCH_CHECK(TENSOR.is_contiguous());                            \
     TORCH_CHECK(TENSOR.is_floating_point() || TENSOR.is_complex()); \
@@ -93,8 +93,8 @@ namespace twobyfour
         const at::Tensor &tens_right)
     {
         TORCH_CHECK(tens_left.sizes() == tens_right.sizes())
-        VALID(tens_left);
-        VALID(tens_right);
+        VALIDATE(tens_left);
+        VALIDATE(tens_right);
 
         at::Tensor result = at::empty_like(tens_left);
         const size_t numel = result.numel();
@@ -149,8 +149,8 @@ namespace twobyfour
         const at::Tensor &tens_point)
     {
         TORCH_CHECK(tens_quat.sizes() == tens_point.sizes())
-        VALID(tens_quat)
-        VALID(tens_point)
+        VALIDATE(tens_quat)
+        VALIDATE(tens_point)
 
         at::Tensor result = at::empty_like(tens_point);
         const size_t numel = result.numel();
