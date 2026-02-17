@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Type, Self
 
 import torch
 import torch.nn.functional as F
@@ -9,8 +9,13 @@ def invalid(data: Tensor) -> bool:
     return not (data.ndim >= 2 and data.shape[-1] == 4)
 
 
-class Quaternion(torch.Tensor):
+def upcast_invalid(data: Tensor, cls: Type[Tensor]) -> Tensor:
+    if isinstance(data, cls) and invalid(data):
+        return data.as_subclass(Tensor)
+    return data
 
+
+class Quaternion(torch.Tensor):
     @staticmethod
     def __new__(cls, data, *args, **kwargs):
         if not isinstance(data, Tensor):
@@ -39,24 +44,13 @@ class Quaternion(torch.Tensor):
 
         ret = super().__torch_function__(func, types, args, kwargs)
 
-        if isinstance(ret, cls) and invalid(ret):
-            ret = ret.as_subclass(Tensor)
-
-        elif isinstance(ret, tuple):
-            return tuple(
-                r.as_subclass(Tensor) if
-                isinstance(r, cls) and invalid(r) else r
-                for r in ret
-            )
-
-        elif isinstance(ret, list):
-            return [
-                r.as_subclass(Tensor) if
-                isinstance(r, cls) and invalid(r) else r
-                for r in ret
-            ]
-
-        return ret
+        match ret:
+            case tuple():
+                return tuple(upcast_invalid(r, cls) for r in ret)
+            case list():
+                return [upcast_invalid(r, cls) for r in ret]
+            case _:
+                return upcast_invalid(ret, cls)
 
     if TYPE_CHECKING:
         def __add__(self, other) -> Self: ...
